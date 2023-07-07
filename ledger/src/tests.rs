@@ -86,6 +86,23 @@ fn test_state_path() {
 }
 
 #[test]
+fn test_get_record_by_commitment() {
+    let rng = &mut TestRng::default();
+
+    // Initialize the ledger.
+    let ledger = crate::test_helpers::sample_ledger(PrivateKey::<CurrentNetwork>::new(rng).unwrap(), rng);
+
+    // Retrieve the genesis block.
+    let block = ledger.get_block(0).unwrap();
+
+    let into_records = block.into_records().collect::<Vec<_>>();
+
+    let (commitment, record) = &into_records[0];
+    let (_, target_record) = ledger.get_record_by_commitment(&commitment).unwrap();
+    assert_eq!(record.to_string(), *target_record.to_string());
+}
+
+#[test]
 fn test_insufficient_finalize_fees() {
     let rng = &mut TestRng::default();
 

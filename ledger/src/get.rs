@@ -196,6 +196,22 @@ impl<N: Network, C: ConsensusStorage<N>> Ledger<N, C> {
             None => bail!("Missing signature for block {height}"),
         }
     }
+
+    pub fn get_record_by_commitment(&self, target_commitment: &Field<N>) -> Option<(Field<N>, Cow<'_, Record<N, Ciphertext<N>>>)> {
+        self.records().find_map(move |cow| {
+            // Retrieve the commitment and record.
+            let (commitment, record) = match cow {
+                (Cow::Borrowed(commitment), record) => (*commitment, record),
+                (Cow::Owned(commitment), record) => (commitment, record),
+            };
+            // If the commitment matches, return the record.
+            if commitment == *target_commitment {
+                return Some((commitment, record));
+            }
+            None
+        })
+    }
+
 }
 
 #[cfg(test)]
