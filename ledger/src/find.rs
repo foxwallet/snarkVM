@@ -141,4 +141,28 @@ impl<N: Network, C: ConsensusStorage<N>> Ledger<N, C> {
             })
         })
     }
+
+    /// Returns the records that matches the commitment
+    pub fn find_record_from_commitment<'a> (
+        &'a self,
+        commit: &'a Field<N>,
+    ) -> Result<impl '_ + Iterator<Item=(Field<N>, Cow<'_, Record<N, Ciphertext<N>>>)>> {
+        // execept return struct
+        // ) -> Result<Record<N, Ciphertext<N>>> {
+        // Iterate over records.
+        Ok(self.records().flat_map(move |cow| {
+            // Retrieve the commitment and record.
+            let (commitment, record) = match cow {
+                (Cow::Borrowed(commitment), record) => (*commitment, record),
+                (Cow::Owned(commitment), record) => (commitment, record),
+            };
+
+            // Check if commitment matches the given commit.
+            if commit.to_string() == commitment.to_string() {
+                Some((commitment, record))
+            } else {
+                None
+            }
+        }))
+    }
 }
