@@ -35,7 +35,7 @@ pub enum ParameterError {
     Wasm(String),
 }
 
-#[cfg(not(feature = "wasm"))]
+#[cfg(feature = "remote")]
 impl From<curl::Error> for ParameterError {
     fn from(error: curl::Error) -> Self {
         ParameterError::Crate("curl::error", format!("{error:?}"))
