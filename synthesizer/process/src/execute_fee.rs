@@ -15,7 +15,8 @@
 use super::*;
 
 impl<N: Network> Process<N> {
-    /// Executes the fee given the credits record, the fee amount (in microcredits),
+
+      /// Executes the fee given the credits record, the fee amount (in microcredits),
     /// and the deployment or execution ID.
     #[inline]
     pub fn execute_fee<A: circuit::Aleo<Network = N>, R: Rng + CryptoRng>(
@@ -50,7 +51,7 @@ impl<N: Network> Process<N> {
         // Initialize the authorization.
         let authorization = Authorization::new(&[request.clone()]);
         lap!(timer, "Initialize the authorization");
-
+        
         // Construct the call stack.
         let call_stack = CallStack::Authorize(vec![request], *private_key, authorization.clone());
         // Construct the authorization from the function.
@@ -82,5 +83,40 @@ impl<N: Network> Process<N> {
         finish!(timer);
 
         Ok((response, trace.transitions()[0].clone(), trace))
+    }
+
+    /// Executes the fee given the credits record, the fee amount (in microcredits),
+    /// and the deployment or execution ID.
+    #[inline]
+    pub fn execute_fee_remote<A: circuit::Aleo<Network = N>, R: Rng + CryptoRng>(
+        &self,
+        private_key: &PrivateKey<N>,
+        credits: Record<N, Plaintext<N>>,
+        fee_in_microcredits: u64,
+        deployment_or_execution_id: Field<N>,
+        rng: &mut R,
+    ) -> Result<Request<N>> {
+        let timer = timer!("Process::execute_fee");
+
+        // Ensure the fee has the correct program ID.
+        let program_id = ProgramID::from_str("credits.aleo")?;
+        // Ensure the fee has the correct function.
+        let function_name = Identifier::from_str("fee")?;
+
+        // Retrieve the input types.
+        let input_types = self.get_program(program_id)?.get_function(&function_name)?.input_types();
+        // Prepare the fee in microcredits.
+        let fee_in_microcredits = Value::from_str(&U64::<N>::new(fee_in_microcredits).to_string())?;
+        // Prepare the deployment or execution ID.
+        let deployment_or_execution_id = Value::from(Literal::Field(deployment_or_execution_id));
+        // Construct the inputs.
+        let inputs = [Value::Record(credits), fee_in_microcredits, deployment_or_execution_id];
+        lap!(timer, "Construct the inputs");
+
+        // Compute the request.
+        let request = Request::sign(private_key, program_id, function_name, inputs.iter(), &input_types, rng);
+        lap!(timer, "Compute the request");
+
+        request
     }
 }

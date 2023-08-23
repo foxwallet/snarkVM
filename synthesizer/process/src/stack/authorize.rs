@@ -51,6 +51,8 @@ impl<N: Network> Stack<N> {
         lap!(timer, "Compute the request");
         // Initialize the authorization.
         let authorization = Authorization::new(&[request.clone()]);
+
+
         // Construct the call stack.
         let call_stack = CallStack::Authorize(vec![request], *private_key, authorization.clone());
         // Construct the authorization from the function.

@@ -15,9 +15,7 @@
 use super::*;
 
 impl<N: Network, C: ConsensusStorage<N>> VM<N, C> {
-    /// Returns a new execute transaction.
-    ///
-    /// The `priority_fee_in_microcredits` is an additional fee **on top** of the deployment fee.
+    
     pub fn execute<R: Rng + CryptoRng>(
         &self,
         private_key: &PrivateKey<N>,
@@ -27,10 +25,14 @@ impl<N: Network, C: ConsensusStorage<N>> VM<N, C> {
         query: Option<Query<N, C::BlockStorage>>,
         rng: &mut R,
     ) -> Result<Transaction<N>> {
+       
         // Compute the authorization.
         let authorization = self.authorize(private_key, program_id, function_name, inputs, rng)?;
+
         // Compute the execution.
+        // 2 服务端执行交易
         let (_response, execution) = self.execute_authorization_raw(authorization, query.clone(), rng)?;
+
         // Compute the fee.
         let fee = match fee {
             None => None,
@@ -44,12 +46,80 @@ impl<N: Network, C: ConsensusStorage<N>> VM<N, C> {
                 // Compute the execution ID.
                 let execution_id = execution.to_execution_id()?;
                 // Compute the fee.
+                //3 交易费用签名，在客户端； 交易费用签名执行，运行在服务端
                 Some(self.execute_fee_raw(private_key, credits, fee_in_microcredits, execution_id, query, rng)?.1)
             }
         };
         // Return the execute transaction.
         Transaction::from_execution(execution, fee)
     }
+
+
+    /// Returns a new execute transaction.
+    ///
+    /// The `priority_fee_in_microcredits` is an additional fee **on top** of the deployment fee.
+    // pub fn execute_new<R: Rng + CryptoRng>(
+    //     &self,
+    //     private_key: &PrivateKey<N>,
+    //     (program_id, function_name): (impl TryInto<ProgramID<N>>, impl TryInto<Identifier<N>>),
+    //     inputs: impl ExactSizeIterator<Item = impl TryInto<Value<N>>>,
+    //     fee: Option<(Record<N, Plaintext<N>>, u64)>,
+    //     query: Option<Query<N, C::BlockStorage>>,
+    //     rng: &mut R,
+    // ) -> Result<Transaction<N>> {
+    //     // 1 用户对交易签名，运行在客户端
+    //     // Compute the authorization.
+    //     let authorization = self.authorize(private_key, program_id, function_name, inputs, rng)?;
+
+    //     let req = authorization.peek_next().unwrap();
+    //     let mut stream = TcpStream::connect("127.0.0.1:7878").unwrap();
+
+    //     let msg_exe = MessageExecute{
+    //         seq : 1,
+    //         program_id,
+    //         function : function_name,
+    //         inputs,
+    //         fee : Some(fee.unwrap().1),
+    //         record : fee.unwrap().0,
+    //         req,
+    //     };
+      
+    //     let msg_exe = serde_json::to_string(&msg_exe).unwrap();
+    //     let ret = stream.write(msg_exe.as_bytes()).unwrap();
+    
+    //     // 获取执行结果
+    //     let mut received_msg = [0; 512];
+    //     stream.read(&mut buffer).unwrap();
+
+    //     let msg: MessageExecuteRsp = serde_json::from_str(&received_msg).unwrap();
+
+    //     // socket.send(authorization);
+    //     // let (_response, execution) = socket.recv();
+    //     let execution = msg.execution;
+
+    //     // Compute the execution.
+    //     // 2 服务端执行交易
+    //     // let (_response, execution) = self.execute_authorization_raw(authorization, query.clone(), rng)?;
+    //     // Compute the fee.
+    //     let fee = match fee {
+    //         None => None,
+    //         Some((credits, priority_fee_in_microcredits)) => {
+    //             // Compute the minimum execution cost.
+    //             let (minimum_execution_cost, (_, _)) = execution_cost(self, &execution)?;
+    //             // Determine the fee.
+    //             let fee_in_microcredits = minimum_execution_cost
+    //                 .checked_add(priority_fee_in_microcredits)
+    //                 .ok_or_else(|| anyhow!("Fee overflowed for an execution transaction"))?;
+    //             // Compute the execution ID.
+    //             let execution_id = execution.to_execution_id()?;
+    //             // Compute the fee.
+    //             //3 交易费用签名，在客户端； 交易费用签名执行，运行在服务端
+    //             Some(self.execute_fee_raw(TcpStream,private_key, credits, fee_in_microcredits, execution_id, query, rng)?.1)
+    //         }
+    //     };
+    //     // Return the execute transaction.
+    //     Transaction::from_execution(execution, fee)
+    // }
 
     /// Returns a new execute transaction for the given authorization.
     pub fn execute_authorization<R: Rng + CryptoRng>(

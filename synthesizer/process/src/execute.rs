@@ -23,6 +23,10 @@ impl<N: Network> Process<N> {
     ) -> Result<(Response<N>, Trace<N>)> {
         let timer = timer!("Process::execute");
 
+        // send(req)
+        //分离-------------， 前面是client  后面是server
+        // recv(req)
+
         // Retrieve the main request (without popping it).
         let request = authorization.peek_next()?;
         // Construct the locator.
