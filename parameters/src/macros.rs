@@ -276,6 +276,7 @@ macro_rules! impl_mobile_local {
                     ));
                 }
                 let _filepath = format!("{}{}.usrs", dir.unwrap(), $fname);
+                eprintln!("==> _filepath {}", &_filepath);
                 let buffer = std::fs::read(_filepath)
                     .map_err(|_| {
                         $crate::errors::ParameterError::Message(
