@@ -187,6 +187,7 @@ macro_rules! impl_load_bytes_logic_remote {
         let mut file_path = aleo_std::aleo_dir();
         file_path.push($local_dir);
         file_path.push($filename);
+        println!("===> impl_load_bytes_logic_remote filepath: {}", &file_path.display());
 
         let buffer = if file_path.exists() {
             // Attempts to load the parameter file locally with an absolute path.
@@ -276,6 +277,7 @@ macro_rules! impl_mobile_local {
                     ));
                 }
                 let _filepath = format!("{}{}.usrs", dir.unwrap(), $fname);
+                println!("===> impl_mobile_local1 _filepath: {}", &_filepath);
                 let buffer = std::fs::read(_filepath)
                     .map_err(|_| {
                         $crate::errors::ParameterError::Message(
@@ -309,7 +311,7 @@ macro_rules! impl_mobile_local {
                     ));
                 }
                 let _filepath = format!("{}{}.{}", dir.unwrap(), $fname, $ftype);
-                eprintln!("==> _filepath {}", &_filepath);
+                println!("==> impl_mobile_local2 _filepath {}", &_filepath);
                 let buffer = std::fs::read(_filepath)
                     .map_err(|_| {
                         $crate::errors::ParameterError::Message(
@@ -349,6 +351,7 @@ macro_rules! impl_local {
                     metadata["size"].to_string().parse().expect("Failed to retrieve the file size");
 
                 let _filepath = concat!($local_dir, $fname, ".", "usrs");
+                println!("===> impl_local1 filename: {}", &_filepath);
                 let buffer = include_bytes!(concat!($local_dir, $fname, ".", "usrs"));
 
                 impl_load_bytes_logic_local!(_filepath, buffer, expected_size, expected_checksum);
@@ -379,6 +382,7 @@ macro_rules! impl_local {
                     metadata[concat!($ftype, "_size")].to_string().parse().expect("Failed to retrieve the file size");
 
                 let _filepath = concat!($local_dir, $fname, ".", $ftype);
+                println!("===> impl_local2 filename: {}", &_filepath);
                 let buffer = include_bytes!(concat!($local_dir, $fname, ".", $ftype));
 
                 impl_load_bytes_logic_local!(_filepath, buffer, expected_size, expected_checksum);
@@ -419,6 +423,8 @@ macro_rules! impl_remote {
                     _ => format!("{}.{}", $fname, "usrs"),
                 };
 
+                println!("===> impl_remote1 filename: {}", &filename);
+
                 impl_load_bytes_logic_remote!(
                     $remote_url,
                     $local_dir,
@@ -458,6 +464,8 @@ macro_rules! impl_remote {
                     Some(sum) => format!("{}.{}.{}", $fname, $ftype, sum),
                     _ => format!("{}.{}", $fname, $ftype),
                 };
+
+                println!("===> impl_remote2 filename: {}", &filename);
 
                 impl_load_bytes_logic_remote!(
                     $remote_url,
