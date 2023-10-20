@@ -52,6 +52,37 @@ impl_mobile_local!(ShiftedDegree25, "resources/", "shifted-powers-of-beta-25", "
 impl_mobile_local!(ShiftedDegree26, "resources/", "shifted-powers-of-beta-26", "usrs");
 impl_mobile_local!(ShiftedDegree27, "resources/", "shifted-powers-of-beta-27", "usrs");
 
+// Degrees
+// impl_local!(Degree15, "resources/", "powers-of-beta-15", "usrs");
+// impl_local!(Degree16, "resources/", "powers-of-beta-16", "usrs");
+// impl_remote!(Degree17, REMOTE_URL, "resources/", "powers-of-beta-17", "usrs");
+// impl_remote!(Degree18, REMOTE_URL, "resources/", "powers-of-beta-18", "usrs");
+// impl_remote!(Degree19, REMOTE_URL, "resources/", "powers-of-beta-19", "usrs");
+// impl_remote!(Degree20, REMOTE_URL, "resources/", "powers-of-beta-20", "usrs");
+// impl_remote!(Degree21, REMOTE_URL, "resources/", "powers-of-beta-21", "usrs");
+// impl_remote!(Degree22, REMOTE_URL, "resources/", "powers-of-beta-22", "usrs");
+// impl_remote!(Degree23, REMOTE_URL, "resources/", "powers-of-beta-23", "usrs");
+// impl_remote!(Degree24, REMOTE_URL, "resources/", "powers-of-beta-24", "usrs");
+// impl_remote!(Degree25, REMOTE_URL, "resources/", "powers-of-beta-25", "usrs");
+// impl_remote!(Degree26, REMOTE_URL, "resources/", "powers-of-beta-26", "usrs");
+// impl_remote!(Degree27, REMOTE_URL, "resources/", "powers-of-beta-27", "usrs");
+// impl_remote!(Degree28, REMOTE_URL, "resources/", "powers-of-beta-28", "usrs");
+
+// Shifted Degrees
+// impl_local!(ShiftedDegree15, "resources/", "shifted-powers-of-beta-15", "usrs");
+// impl_remote!(ShiftedDegree16, REMOTE_URL, "resources/", "shifted-powers-of-beta-16", "usrs");
+// impl_remote!(ShiftedDegree17, REMOTE_URL, "resources/", "shifted-powers-of-beta-17", "usrs");
+// impl_remote!(ShiftedDegree18, REMOTE_URL, "resources/", "shifted-powers-of-beta-18", "usrs");
+// impl_remote!(ShiftedDegree19, REMOTE_URL, "resources/", "shifted-powers-of-beta-19", "usrs");
+// impl_remote!(ShiftedDegree20, REMOTE_URL, "resources/", "shifted-powers-of-beta-20", "usrs");
+// impl_remote!(ShiftedDegree21, REMOTE_URL, "resources/", "shifted-powers-of-beta-21", "usrs");
+// impl_remote!(ShiftedDegree22, REMOTE_URL, "resources/", "shifted-powers-of-beta-22", "usrs");
+// impl_remote!(ShiftedDegree23, REMOTE_URL, "resources/", "shifted-powers-of-beta-23", "usrs");
+// impl_remote!(ShiftedDegree24, REMOTE_URL, "resources/", "shifted-powers-of-beta-24", "usrs");
+// impl_remote!(ShiftedDegree25, REMOTE_URL, "resources/", "shifted-powers-of-beta-25", "usrs");
+// impl_remote!(ShiftedDegree26, REMOTE_URL, "resources/", "shifted-powers-of-beta-26", "usrs");
+// impl_remote!(ShiftedDegree27, REMOTE_URL, "resources/", "shifted-powers-of-beta-27", "usrs");
+
 // Powers of Beta Times Gamma * G
 impl_local!(Gamma, "resources/", "powers-of-beta-gamma", "usrs");
 // Negative Powers of Beta in G2
@@ -60,71 +91,75 @@ impl_local!(NegBeta, "resources/", "neg-powers-of-beta", "usrs");
 impl_local!(BetaH, "resources/", "beta-h", "usrs");
 
 // BondPublic
-// impl_remote!(BondPublicProver, REMOTE_URL, "resources/", "bond_public", "prover");
 impl_local!(BondPublicVerifier, "resources/", "bond_public", "verifier");
 // // UnbondPublic
-// impl_remote!(UnbondPublicProver, REMOTE_URL, "resources/", "unbond_public", "prover");
 impl_local!(UnbondPublicVerifier, "resources/", "unbond_public", "verifier");
 // // UnbondDelegatorAsValidator
-// impl_remote!(UnbondDelegatorAsValidatorProver, REMOTE_URL, "resources/", "unbond_delegator_as_validator", "prover");
 impl_local!(UnbondDelegatorAsValidatorVerifier, "resources/", "unbond_delegator_as_validator", "verifier");
 // // ClaimUnbondPublic
-// impl_remote!(ClaimUnbondPublicProver, REMOTE_URL, "resources/", "claim_unbond_public", "prover");
 impl_local!(ClaimUnbondPublicVerifier, "resources/", "claim_unbond_public", "verifier");
 // // SetValidatorState
-// impl_remote!(SetValidatorStateProver, REMOTE_URL, "resources/", "set_validator_state", "prover");
 impl_local!(SetValidatorStateVerifier, "resources/", "set_validator_state", "verifier");
 // // TransferPrivate
-// impl_remote!(TransferPrivateProver, REMOTE_URL, "resources/", "transfer_private", "prover");
 impl_local!(TransferPrivateVerifier, "resources/", "transfer_private", "verifier");
 // // TransferPublic
-// impl_remote!(TransferPublicProver, REMOTE_URL, "resources/", "transfer_public", "prover");
 impl_local!(TransferPublicVerifier, "resources/", "transfer_public", "verifier");
 // // TransferPrivateToPublic
-// impl_remote!(TransferPrivateToPublicProver, REMOTE_URL, "resources/", "transfer_private_to_public", "prover");
 impl_local!(TransferPrivateToPublicVerifier, "resources/", "transfer_private_to_public", "verifier");
 // // TransferPublicToPrivate
-// impl_remote!(TransferPublicToPrivateProver, REMOTE_URL, "resources/", "transfer_public_to_private", "prover");
 impl_local!(TransferPublicToPrivateVerifier, "resources/", "transfer_public_to_private", "verifier");
 // // Join
-// impl_remote!(JoinProver, REMOTE_URL, "resources/", "join", "prover");
 impl_local!(JoinVerifier, "resources/", "join", "verifier");
 // // Split
-// impl_remote!(SplitProver, REMOTE_URL, "resources/", "split", "prover");
 impl_local!(SplitVerifier, "resources/", "split", "verifier");
 // // FeePrivate
-// impl_remote!(FeePrivateProver, REMOTE_URL, "resources/", "fee_private", "prover");
 impl_local!(FeePrivateVerifier, "resources/", "fee_private", "verifier");
 // // FeePublic
-// impl_remote!(FeePublicProver, REMOTE_URL, "resources/", "fee_public", "prover");
 impl_local!(FeePublicVerifier, "resources/", "fee_public", "verifier");
 
+// impl_remote!(BondPublicProver, REMOTE_URL, "resources/", "bond_public", "prover");
+// impl_remote!(UnbondPublicProver, REMOTE_URL, "resources/", "unbond_public", "prover");
+// impl_remote!(UnbondDelegatorAsValidatorProver, REMOTE_URL, "resources/", "unbond_delegator_as_validator", "prover");
+// impl_remote!(ClaimUnbondPublicProver, REMOTE_URL, "resources/", "claim_unbond_public", "prover");
+// impl_remote!(SetValidatorStateProver, REMOTE_URL, "resources/", "set_validator_state", "prover");
+// impl_remote!(TransferPrivateProver, REMOTE_URL, "resources/", "transfer_private", "prover");
+// impl_remote!(TransferPublicProver, REMOTE_URL, "resources/", "transfer_public", "prover");
+// impl_remote!(TransferPrivateToPublicProver, REMOTE_URL, "resources/", "transfer_private_to_public", "prover");
+// impl_remote!(TransferPublicToPrivateProver, REMOTE_URL, "resources/", "transfer_public_to_private", "prover");
+// impl_remote!(JoinProver, REMOTE_URL, "resources/", "join", "prover");
+// impl_remote!(SplitProver, REMOTE_URL, "resources/", "split", "prover");
+// impl_remote!(FeePrivateProver, REMOTE_URL, "resources/", "fee_private", "prover");
+// impl_remote!(FeePublicProver, REMOTE_URL, "resources/", "fee_public", "prover");
+
+
 impl_mobile_local!(BondPublicProver, "resources/", "bond_public", "prover");
-// impl_mobile_local!(BondPublicVerifier, "resources/", "bond_public", "verifier");
 impl_mobile_local!(UnbondPublicProver, "resources/", "unbond_public", "prover");
-// impl_mobile_local!(UnbondPublicVerifier, "resources/", "unbond_public", "verifier");
 impl_mobile_local!(UnbondDelegatorAsValidatorProver, "resources/", "unbond_delegator_as_validator", "prover");
-// impl_mobile_local!(UnbondDelegatorAsValidatorVerifier, "resources/", "unbond_delegator_as_validator", "verifier");
 impl_mobile_local!(ClaimUnbondPublicProver, "resources/", "claim_unbond_public", "prover");
-// impl_mobile_local!(ClaimUnbondPublicVerifier, "resources/", "claim_unbond_public", "verifier");
 impl_mobile_local!(SetValidatorStateProver, "resources/", "set_validator_state", "prover");
-// impl_mobile_local!(SetValidatorStateVerifier, "resources/", "set_validator_state", "verifier");
 impl_mobile_local!(TransferPrivateProver, "resources/", "transfer_private", "prover");
-// impl_mobile_local!(TransferPrivateVerifier, "resources/", "transfer_private", "verifier");
 impl_mobile_local!(TransferPublicProver, "resources/", "transfer_public", "prover");
-// impl_mobile_local!(TransferPublicVerifier, "resources/", "transfer_public", "verifier");
 impl_mobile_local!(TransferPrivateToPublicProver, "resources/", "transfer_private_to_public", "prover");
-// impl_mobile_local!(TransferPrivateToPublicVerifier, "resources/", "transfer_private_to_public", "verifier");
 impl_mobile_local!(TransferPublicToPrivateProver, "resources/", "transfer_public_to_private", "prover");
-// impl_mobile_local!(TransferPublicToPrivateVerifier, "resources/", "transfer_public_to_private", "verifier");
 impl_mobile_local!(JoinProver, "resources/", "join", "prover");
-// impl_mobile_local!(JoinVerifier, "resources/", "join", "verifier");
 impl_mobile_local!(SplitProver, "resources/", "split", "prover");
-// impl_mobile_local!(SplitVerifier, "resources/", "split", "verifier");
 impl_mobile_local!(FeePrivateProver, "resources/", "fee_private", "prover");
-// impl_mobile_local!(FeePrivateVerifier, "resources/", "fee_private", "verifier");
 impl_mobile_local!(FeePublicProver, "resources/", "fee_public", "prover");
+
+// impl_mobile_local!(BondPublicVerifier, "resources/", "bond_public", "verifier");
+// impl_mobile_local!(UnbondPublicVerifier, "resources/", "unbond_public", "verifier");
+// impl_mobile_local!(UnbondDelegatorAsValidatorVerifier, "resources/", "unbond_delegator_as_validator", "verifier");
+// impl_mobile_local!(ClaimUnbondPublicVerifier, "resources/", "claim_unbond_public", "verifier");
+// impl_mobile_local!(SetValidatorStateVerifier, "resources/", "set_validator_state", "verifier");
+// impl_mobile_local!(TransferPrivateVerifier, "resources/", "transfer_private", "verifier");
+// impl_mobile_local!(TransferPublicVerifier, "resources/", "transfer_public", "verifier");
+// impl_mobile_local!(TransferPrivateToPublicVerifier, "resources/", "transfer_private_to_public", "verifier");
+// impl_mobile_local!(TransferPublicToPrivateVerifier, "resources/", "transfer_public_to_private", "verifier");
+// impl_mobile_local!(JoinVerifier, "resources/", "join", "verifier");
+// impl_mobile_local!(SplitVerifier, "resources/", "split", "verifier");
+// impl_mobile_local!(FeePrivateVerifier, "resources/", "fee_private", "verifier");
 // impl_mobile_local!(FeePublicVerifier, "resources/", "fee_public", "verifier");
+
 
 #[macro_export]
 macro_rules! insert_credit_keys {
