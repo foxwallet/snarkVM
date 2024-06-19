@@ -12,6 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+pub static mut DIR: Option<String> = None;
+
+pub fn set_dir(dir: String) {
+    unsafe {
+        DIR = Some(dir);
+    }
+}
+
+pub fn get_dir() -> Option<String> {
+    unsafe {
+        DIR.clone()
+    }
+}
+
 #[macro_export]
 macro_rules! checksum {
     ($bytes: expr) => {{
@@ -296,6 +310,78 @@ macro_rules! impl_local {
                 let buffer = include_bytes!(concat!($local_dir, $fname, ".", $ftype));
 
                 impl_load_bytes_logic_local!(_filepath, buffer, expected_size, expected_checksum);
+            }
+        }
+
+        paste::item! {
+            #[cfg(test)]
+            #[test]
+            fn [< test_ $fname _ $ftype >]() {
+                assert!($name::load_bytes().is_ok());
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! impl_mobile_local {
+    ($name: ident, $local_dir: expr, $fname: tt, "usrs") => {
+        #[derive(Clone, Debug, PartialEq, Eq)]
+        pub struct $name;
+
+        impl $name {
+
+            pub fn load_bytes() -> Result<Vec<u8>, $crate::errors::ParameterError> {
+                let dir: Option<String> = get_dir();
+                if dir.is_none() {
+                    return Err($crate::errors::ParameterError::Message(
+                        "The parameter directory was not set".to_string(),
+                    ));
+                }
+                let _filepath = format!("{}{}.usrs", dir.unwrap(), $fname);
+                println!("===> impl_mobile_local1 _filepath: {}", &_filepath);
+                let buffer = std::fs::read(_filepath)
+                    .map_err(|_| {
+                        $crate::errors::ParameterError::Message(
+                            "Failed to read usrs file".to_string(),
+                        )
+                    })?;
+
+                Ok(buffer.to_vec())
+            }
+        }
+
+        paste::item! {
+            #[cfg(test)]
+            #[test]
+            fn [< test_ $fname _usrs >]() {
+                assert!($name::load_bytes().is_ok());
+            }
+        }
+    };
+    ($name: ident, $local_dir: expr, $fname: tt, $ftype: tt) => {
+        #[derive(Clone, Debug, PartialEq, Eq)]
+        pub struct $name;
+
+        impl $name {
+
+            pub fn load_bytes() -> Result<Vec<u8>, $crate::errors::ParameterError> {
+                let dir: Option<String> = get_dir();
+                if dir.is_none() {
+                    return Err($crate::errors::ParameterError::Message(
+                        "The parameter directory was not set".to_string(),
+                    ));
+                }
+                let _filepath = format!("{}{}.{}", dir.unwrap(), $fname, $ftype);
+                println!("==> impl_mobile_local2 _filepath {}", &_filepath);
+                let buffer = std::fs::read(_filepath)
+                    .map_err(|_| {
+                        $crate::errors::ParameterError::Message(
+                            format!("Failed to read {} file", $ftype),
+                        )
+                    })?;
+
+                Ok(buffer.to_vec())
             }
         }
 
