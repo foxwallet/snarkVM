@@ -17,6 +17,7 @@ pub use genesis::*;
 
 pub mod powers;
 pub use powers::*;
+use crate::macros::get_dir;
 
 /// The restrictions list as a JSON-compatible string.
 pub const RESTRICTIONS_LIST: &str = include_str!("./resources/restrictions.json");
@@ -24,7 +25,6 @@ pub const RESTRICTIONS_LIST: &str = include_str!("./resources/restrictions.json"
 const REMOTE_URL: &str = "https://parameters.aleo.org/mainnet";
 
 impl_mobile_local!(Degree15, "resources/", "powers-of-beta-15", "usrs");
-impl_mobile_local!(Degree16, "resources/", "powers-of-beta-16", "usrs");
 impl_mobile_local!(Degree16, "resources/", "powers-of-beta-16", "usrs");
 impl_mobile_local!(Degree17, "resources/", "powers-of-beta-17", "usrs");
 impl_mobile_local!(Degree18, "resources/", "powers-of-beta-18", "usrs");
