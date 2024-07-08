@@ -55,11 +55,11 @@ impl_mobile_local!(ShiftedDegree26, "resources/", "shifted-powers-of-beta-26", "
 impl_mobile_local!(ShiftedDegree27, "resources/", "shifted-powers-of-beta-27", "usrs");
 
 // Powers of Beta Times Gamma * G
-impl_mobile_local!(Gamma, "resources/", "powers-of-beta-gamma", "usrs");
+impl_local!(Gamma, "resources/", "powers-of-beta-gamma", "usrs");
 // Negative Powers of Beta in G2
-impl_mobile_local!(NegBeta, "resources/", "neg-powers-of-beta", "usrs");
+impl_local!(NegBeta, "resources/", "neg-powers-of-beta", "usrs");
 // Negative Powers of Beta in G2
-impl_mobile_local!(BetaH, "resources/", "beta-h", "usrs");
+impl_local!(BetaH, "resources/", "beta-h", "usrs");
 
 // BondPublic
 impl_mobile_local!(BondPublicProver, "resources/", "bond_public", "prover");
