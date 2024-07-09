@@ -264,6 +264,11 @@ version = "2.7"
 features = [ "json" ]
 optional = true
 
+[dependencies.ahash]
+version = "0.8.3"
+default-features = false
+features = []
+
 [dev-dependencies.bincode]
 version = "1.3"
 

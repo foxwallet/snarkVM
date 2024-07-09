@@ -45,7 +45,7 @@ macro_rules! checksum_error {
 macro_rules! remove_file {
     ($filepath:expr) => {
         // Safely remove the corrupt file, if it exists.
-        #[cfg(not(feature = "wasm"))]
+        #[cfg(feature = "remote")]
         if std::path::PathBuf::from(&$filepath).exists() {
             match std::fs::remove_file(&$filepath) {
                 Ok(()) => println!("Removed {:?}. Please retry the command.", $filepath),
@@ -57,7 +57,7 @@ macro_rules! remove_file {
 
 macro_rules! impl_store_and_remote_fetch {
     () => {
-        #[cfg(not(feature = "wasm"))]
+        #[cfg(feature = "remote")]
         fn store_bytes(buffer: &[u8], file_path: &std::path::Path) -> Result<(), $crate::errors::ParameterError> {
             use snarkvm_utilities::Write;
 
@@ -81,7 +81,7 @@ macro_rules! impl_store_and_remote_fetch {
             Ok(())
         }
 
-        #[cfg(not(feature = "wasm"))]
+        #[cfg(feature = "remote")]
         fn remote_fetch(buffer: &mut Vec<u8>, url: &str) -> Result<(), $crate::errors::ParameterError> {
             let mut easy = curl::easy::Easy::new();
             easy.follow_location(true)?;
@@ -207,7 +207,7 @@ macro_rules! impl_load_bytes_logic_remote {
 
             // Load remote file
             cfg_if::cfg_if! {
-                if #[cfg(not(feature = "wasm"))] {
+                if #[cfg(feature = "remote")] {
                     let mut buffer = vec![];
                     Self::remote_fetch(&mut buffer, &url)?;
 
