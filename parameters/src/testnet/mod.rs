@@ -15,6 +15,8 @@
 pub mod genesis;
 pub use genesis::*;
 
+use crate::macros::get_dir;
+
 /// The restrictions list as a JSON-compatible string.
 pub const RESTRICTIONS_LIST: &str = include_str!("./resources/restrictions.json");
 
@@ -99,8 +101,8 @@ macro_rules! insert_testnet_key {
 }
 
 // Inclusion
-impl_remote!(InclusionProver, REMOTE_URL, "resources/", "inclusion", "prover");
-impl_local!(InclusionVerifier, "resources/", "inclusion", "verifier");
+impl_mobile_local!(InclusionProver, "resources/", "inclusion", "prover");
+impl_mobile_local!(InclusionVerifier, "resources/", "inclusion", "verifier");
 
 /// The function name for the inclusion circuit.
 pub const NETWORK_INCLUSION_FUNCTION_NAME: &str = "inclusion";
