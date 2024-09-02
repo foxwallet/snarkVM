@@ -63,46 +63,46 @@ impl_local!(BetaH, "resources/", "beta-h", "usrs");
 
 // BondPublic
 impl_mobile_local!(BondPublicProver, "resources/", "bond_public", "prover");
-impl_mobile_local!(BondPublicVerifier, "resources/", "bond_public", "verifier");
+impl_local!(BondPublicVerifier, "resources/", "bond_public", "verifier");
 // BondValidator
 impl_mobile_local!(BondValidatorProver, "resources/", "bond_validator", "prover");
-impl_mobile_local!(BondValidatorVerifier, "resources/", "bond_validator", "verifier");
+impl_local!(BondValidatorVerifier, "resources/", "bond_validator", "verifier");
 // UnbondPublic
 impl_mobile_local!(UnbondPublicProver, "resources/", "unbond_public", "prover");
-impl_mobile_local!(UnbondPublicVerifier, "resources/", "unbond_public", "verifier");
+impl_local!(UnbondPublicVerifier, "resources/", "unbond_public", "verifier");
 // ClaimUnbondPublic
 impl_mobile_local!(ClaimUnbondPublicProver, "resources/", "claim_unbond_public", "prover");
-impl_mobile_local!(ClaimUnbondPublicVerifier, "resources/", "claim_unbond_public", "verifier");
+impl_local!(ClaimUnbondPublicVerifier, "resources/", "claim_unbond_public", "verifier");
 // SetValidatorState
 impl_mobile_local!(SetValidatorStateProver, "resources/", "set_validator_state", "prover");
-impl_mobile_local!(SetValidatorStateVerifier, "resources/", "set_validator_state", "verifier");
+impl_local!(SetValidatorStateVerifier, "resources/", "set_validator_state", "verifier");
 // TransferPrivate
 impl_mobile_local!(TransferPrivateProver, "resources/", "transfer_private", "prover");
-impl_mobile_local!(TransferPrivateVerifier, "resources/", "transfer_private", "verifier");
+impl_local!(TransferPrivateVerifier, "resources/", "transfer_private", "verifier");
 // TransferPublic
 impl_mobile_local!(TransferPublicProver, "resources/", "transfer_public", "prover");
-impl_mobile_local!(TransferPublicVerifier, "resources/", "transfer_public", "verifier");
+impl_local!(TransferPublicVerifier, "resources/", "transfer_public", "verifier");
 // TransferPublicAsSigner
 impl_mobile_local!(TransferPublicAsSignerProver, "resources/", "transfer_public_as_signer", "prover");
-impl_mobile_local!(TransferPublicAsSignerVerifier, "resources/", "transfer_public_as_signer", "verifier");
+impl_local!(TransferPublicAsSignerVerifier, "resources/", "transfer_public_as_signer", "verifier");
 // TransferPrivateToPublic
 impl_mobile_local!(TransferPrivateToPublicProver, "resources/", "transfer_private_to_public", "prover");
-impl_mobile_local!(TransferPrivateToPublicVerifier, "resources/", "transfer_private_to_public", "verifier");
+impl_local!(TransferPrivateToPublicVerifier, "resources/", "transfer_private_to_public", "verifier");
 // TransferPublicToPrivate
 impl_mobile_local!(TransferPublicToPrivateProver, "resources/", "transfer_public_to_private", "prover");
-impl_mobile_local!(TransferPublicToPrivateVerifier, "resources/", "transfer_public_to_private", "verifier");
+impl_local!(TransferPublicToPrivateVerifier, "resources/", "transfer_public_to_private", "verifier");
 // Join
 impl_mobile_local!(JoinProver, "resources/", "join", "prover");
-impl_mobile_local!(JoinVerifier, "resources/", "join", "verifier");
+impl_local!(JoinVerifier, "resources/", "join", "verifier");
 // Split
 impl_mobile_local!(SplitProver, "resources/", "split", "prover");
-impl_mobile_local!(SplitVerifier, "resources/", "split", "verifier");
+impl_local!(SplitVerifier, "resources/", "split", "verifier");
 // FeePrivate
 impl_mobile_local!(FeePrivateProver, "resources/", "fee_private", "prover");
-impl_mobile_local!(FeePrivateVerifier, "resources/", "fee_private", "verifier");
+impl_local!(FeePrivateVerifier, "resources/", "fee_private", "verifier");
 // FeePublic
 impl_mobile_local!(FeePublicProver, "resources/", "fee_public", "prover");
-impl_mobile_local!(FeePublicVerifier, "resources/", "fee_public", "verifier");
+impl_local!(FeePublicVerifier, "resources/", "fee_public", "verifier");
 
 #[macro_export]
 macro_rules! insert_credit_keys {
