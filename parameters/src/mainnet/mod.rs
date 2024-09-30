@@ -141,7 +141,7 @@ macro_rules! insert_key {
 
 // Inclusion
 impl_mobile_local!(InclusionProver, "resources/", "inclusion", "prover");
-impl_mobile_local!(InclusionVerifier, "resources/", "inclusion", "verifier");
+impl_local!(InclusionVerifier, "resources/", "inclusion", "verifier");
 
 /// The function name for the inclusion circuit.
 pub const NETWORK_INCLUSION_FUNCTION_NAME: &str = "inclusion";
