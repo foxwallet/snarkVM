@@ -1,9 +1,10 @@
-// Copyright (C) 2019-2023 Aleo Systems Inc.
+// Copyright 2024 Aleo Network Foundation
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at:
+
 // http://www.apache.org/licenses/LICENSE-2.0
 
 // Unless required by applicable law or agreed to in writing, software
@@ -17,7 +18,7 @@
 #![warn(clippy::cast_possible_truncation)]
 #![cfg_attr(not(feature = "aleo-cli"), allow(unused_variables))]
 
-use console::network::{prelude::*, FiatShamir};
+use console::network::{FiatShamir, prelude::*};
 use snarkvm_algorithms::{snark::varuna, traits::SNARK};
 
 use once_cell::sync::OnceCell;
@@ -51,6 +52,7 @@ pub(crate) mod test_helpers {
         types::Field,
     };
     use console::{network::MainnetV0, prelude::One as _};
+    use snarkvm_algorithms::snark::varuna::VarunaVersion;
 
     use once_cell::sync::OnceCell;
 
@@ -116,7 +118,7 @@ pub(crate) mod test_helpers {
             .get_or_init(|| {
                 let assignment = sample_assignment();
                 let (proving_key, _) = sample_keys();
-                proving_key.prove("test", &assignment, &mut TestRng::default()).unwrap()
+                proving_key.prove("test", VarunaVersion::V2, &assignment, &mut TestRng::default()).unwrap()
             })
             .clone()
     }
@@ -139,6 +141,7 @@ mod test {
     use super::*;
     use circuit::environment::{Circuit, Environment};
     use console::network::MainnetV0;
+    use snarkvm_algorithms::snark::varuna::VarunaVersion;
 
     type CurrentNetwork = MainnetV0;
 
@@ -149,23 +152,25 @@ mod test {
         // Varuna setup, prove, and verify.
         let srs = UniversalSRS::<CurrentNetwork>::load().unwrap();
         let (proving_key, verifying_key) = srs.to_circuit_key("test", &assignment).unwrap();
+        let varuna_version = VarunaVersion::V2;
         println!("Called circuit setup");
 
-        let proof = proving_key.prove("test", &assignment, &mut TestRng::default()).unwrap();
+        let proof = proving_key.prove("test", varuna_version, &assignment, &mut TestRng::default()).unwrap();
         println!("Called prover");
 
         let one = <Circuit as Environment>::BaseField::one();
-        assert!(verifying_key.verify("test", &[one, one], &proof));
+        assert!(verifying_key.verify("test", varuna_version, &[one, one], &proof));
         println!("Called verifier");
         println!("\nShould not verify (i.e. verifier messages should print below):");
-        assert!(!verifying_key.verify("test", &[one, one + one], &proof));
+        assert!(!verifying_key.verify("test", varuna_version, &[one, one + one], &proof));
+        assert!(!verifying_key.verify("test", VarunaVersion::V1, &[one, one], &proof));
     }
 
     #[test]
     fn test_varuna_verify_public_input_size() {
         /// Creates a simple circuit: a * b.
         fn create_assignment() -> circuit::Assignment<<CurrentNetwork as console::prelude::Environment>::Field> {
-            use circuit::{environment::Mode, types::Field, Inject};
+            use circuit::{Inject, environment::Mode, types::Field};
 
             // Ensure the circuit environment is clean.
             Circuit::reset();
@@ -191,21 +196,23 @@ mod test {
 
         let srs = UniversalSRS::<CurrentNetwork>::load().unwrap();
         let (proving_key, verifying_key) = srs.to_circuit_key("test", &assignment).unwrap();
+        let varuna_version = VarunaVersion::V2;
         println!("Called circuit setup");
 
-        let proof = proving_key.prove("test", &assignment, &mut TestRng::default()).unwrap();
+        let proof = proving_key.prove("test", varuna_version, &assignment, &mut TestRng::default()).unwrap();
         println!("Called prover");
 
         // Should pass.
         let one = <Circuit as Environment>::BaseField::one();
-        assert!(verifying_key.verify("test", &[one], &proof));
+        assert!(verifying_key.verify("test", varuna_version, &[one], &proof));
 
         // Should fail.
-        assert!(!verifying_key.verify("test", &[one, one], &proof));
-        assert!(!verifying_key.verify("test", &[one, one + one], &proof));
-        assert!(!verifying_key.verify("test", &[one, one, one], &proof));
-        assert!(!verifying_key.verify("test", &[one, one, one + one], &proof));
-        assert!(!verifying_key.verify("test", &[one, one, one, one], &proof));
+        assert!(!verifying_key.verify("test", VarunaVersion::V1, &[one], &proof));
+        assert!(!verifying_key.verify("test", varuna_version, &[one, one], &proof));
+        assert!(!verifying_key.verify("test", varuna_version, &[one, one + one], &proof));
+        assert!(!verifying_key.verify("test", varuna_version, &[one, one, one], &proof));
+        assert!(!verifying_key.verify("test", varuna_version, &[one, one, one + one], &proof));
+        assert!(!verifying_key.verify("test", varuna_version, &[one, one, one, one], &proof));
 
         println!("Called verifier");
     }

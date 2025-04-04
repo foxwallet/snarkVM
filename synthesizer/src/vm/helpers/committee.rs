@@ -1,9 +1,10 @@
-// Copyright (C) 2019-2023 Aleo Systems Inc.
+// Copyright 2024 Aleo Network Foundation
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at:
+
 // http://www.apache.org/licenses/LICENSE-2.0
 
 // Unless required by applicable law or agreed to in writing, software
@@ -19,12 +20,12 @@ use console::{
     network::Network,
     prelude::{cfg_into_iter, cfg_iter, cfg_reduce},
     program::{Identifier, Literal, Plaintext, Value},
-    types::{Boolean, U64, U8},
+    types::{Boolean, U8, U64},
 };
 use ledger_committee::Committee;
 
-use anyhow::{bail, ensure, Result};
-use indexmap::{indexmap, IndexMap};
+use anyhow::{Result, bail, ensure};
+use indexmap::{IndexMap, indexmap};
 use std::str::FromStr;
 
 #[cfg(not(feature = "serial"))]
@@ -465,7 +466,7 @@ mod tests {
         let rng = &mut TestRng::default();
 
         // Sample a committee.
-        let committee = ledger_committee::test_helpers::sample_committee_for_round_and_size(1, 100, rng);
+        let committee = ledger_committee::test_helpers::sample_committee_for_round_and_size(1, 25, rng);
 
         // Initialize the committee map.
         let committee_map = to_committee_map(committee.members());
@@ -488,7 +489,7 @@ mod tests {
         let rng = &mut TestRng::default();
 
         // Sample a committee.
-        let committee = ledger_committee::test_helpers::sample_committee_for_round_and_size(1, 100, rng);
+        let committee = ledger_committee::test_helpers::sample_committee_for_round_and_size(1, 25, rng);
         // Convert the committee into stakers.
         let expected_stakers = crate::committee::test_helpers::to_stakers(committee.members(), rng);
         // Initialize the bonded map.
@@ -508,7 +509,7 @@ mod tests {
         let rng = &mut TestRng::default();
 
         // Sample a committee.
-        let committee = ledger_committee::test_helpers::sample_committee_for_round_and_size(1, 100, rng);
+        let committee = ledger_committee::test_helpers::sample_committee_for_round_and_size(1, 25, rng);
         // Convert the committee into stakers.
         let stakers = crate::committee::test_helpers::to_stakers(committee.members(), rng);
 
@@ -525,7 +526,7 @@ mod tests {
         let rng = &mut TestRng::default();
 
         // Sample a committee.
-        let committee = ledger_committee::test_helpers::sample_committee_for_round_and_size(1, 100, rng);
+        let committee = ledger_committee::test_helpers::sample_committee_for_round_and_size(1, 25, rng);
         // Convert the committee into stakers.
         let _stakers = crate::committee::test_helpers::to_stakers(committee.members(), rng);
         // Convert the committee into delegations.

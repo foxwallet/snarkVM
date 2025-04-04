@@ -1,9 +1,10 @@
-// Copyright (C) 2019-2023 Aleo Systems Inc.
+// Copyright 2024 Aleo Network Foundation
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at:
+
 // http://www.apache.org/licenses/LICENSE-2.0
 
 // Unless required by applicable law or agreed to in writing, software
@@ -13,8 +14,6 @@
 // limitations under the License.
 
 use crate::{
-    impl_add_sub_from_field_ref,
-    impl_mul_div_from_field_ref,
     FftField,
     Field,
     FieldError,
@@ -26,13 +25,15 @@ use crate::{
     PrimeField,
     SquareRootField,
     Zero,
+    impl_add_sub_from_field_ref,
+    impl_mul_div_from_field_ref,
 };
 use snarkvm_utilities::{
-    biginteger::{arithmetic as fa, BigInteger as _BigInteger, BigInteger384 as BigInteger},
-    serialize::CanonicalDeserialize,
     FromBytes,
     ToBits,
     ToBytes,
+    biginteger::{BigInteger as _BigInteger, BigInteger384 as BigInteger, arithmetic as fa},
+    serialize::CanonicalDeserialize,
 };
 
 use std::{
@@ -699,7 +700,7 @@ impl<P: Fp384Parameters> Neg for Fp384<P> {
     }
 }
 
-impl<'a, P: Fp384Parameters> Add<&'a Fp384<P>> for Fp384<P> {
+impl<P: Fp384Parameters> Add<&'_ Fp384<P>> for Fp384<P> {
     type Output = Self;
 
     #[inline]
@@ -710,7 +711,7 @@ impl<'a, P: Fp384Parameters> Add<&'a Fp384<P>> for Fp384<P> {
     }
 }
 
-impl<'a, P: Fp384Parameters> Sub<&'a Fp384<P>> for Fp384<P> {
+impl<P: Fp384Parameters> Sub<&'_ Fp384<P>> for Fp384<P> {
     type Output = Self;
 
     #[inline]
@@ -721,7 +722,7 @@ impl<'a, P: Fp384Parameters> Sub<&'a Fp384<P>> for Fp384<P> {
     }
 }
 
-impl<'a, P: Fp384Parameters> Mul<&'a Fp384<P>> for Fp384<P> {
+impl<P: Fp384Parameters> Mul<&'_ Fp384<P>> for Fp384<P> {
     type Output = Self;
 
     #[inline]
@@ -732,7 +733,7 @@ impl<'a, P: Fp384Parameters> Mul<&'a Fp384<P>> for Fp384<P> {
     }
 }
 
-impl<'a, P: Fp384Parameters> Div<&'a Fp384<P>> for Fp384<P> {
+impl<P: Fp384Parameters> Div<&'_ Fp384<P>> for Fp384<P> {
     type Output = Self;
 
     #[inline]
@@ -743,7 +744,7 @@ impl<'a, P: Fp384Parameters> Div<&'a Fp384<P>> for Fp384<P> {
     }
 }
 
-impl<'a, P: Fp384Parameters> AddAssign<&'a Self> for Fp384<P> {
+impl<P: Fp384Parameters> AddAssign<&'_ Self> for Fp384<P> {
     #[inline]
     fn add_assign(&mut self, other: &Self) {
         // This cannot exceed the backing capacity.
@@ -753,7 +754,7 @@ impl<'a, P: Fp384Parameters> AddAssign<&'a Self> for Fp384<P> {
     }
 }
 
-impl<'a, P: Fp384Parameters> SubAssign<&'a Self> for Fp384<P> {
+impl<P: Fp384Parameters> SubAssign<&'_ Self> for Fp384<P> {
     #[inline]
     fn sub_assign(&mut self, other: &Self) {
         // If `other` is larger than `self`, add the modulus to self first.
@@ -765,7 +766,7 @@ impl<'a, P: Fp384Parameters> SubAssign<&'a Self> for Fp384<P> {
     }
 }
 
-impl<'a, P: Fp384Parameters> MulAssign<&'a Self> for Fp384<P> {
+impl<P: Fp384Parameters> MulAssign<&'_ Self> for Fp384<P> {
     #[inline]
     fn mul_assign(&mut self, other: &Self) {
         let mut r = [0u64; 6];
@@ -897,7 +898,7 @@ impl<'a, P: Fp384Parameters> MulAssign<&'a Self> for Fp384<P> {
     }
 }
 
-impl<'a, P: Fp384Parameters> DivAssign<&'a Self> for Fp384<P> {
+impl<P: Fp384Parameters> DivAssign<&'_ Self> for Fp384<P> {
     #[inline]
     fn div_assign(&mut self, other: &Self) {
         self.mul_assign(&other.inverse().unwrap());

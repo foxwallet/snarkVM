@@ -1,9 +1,10 @@
-// Copyright (C) 2019-2023 Aleo Systems Inc.
+// Copyright 2024 Aleo Network Foundation
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at:
+
 // http://www.apache.org/licenses/LICENSE-2.0
 
 // Unless required by applicable law or agreed to in writing, software
@@ -21,8 +22,10 @@ use snarkvm_utilities::TestRng;
 use core::str::FromStr;
 use wasm_bindgen_test::*;
 
+#[allow(dead_code)]
 const ITERATIONS: usize = 1000;
 
+#[allow(dead_code)]
 #[wasm_bindgen_test]
 fn test_account() {
     const ALEO_PRIVATE_KEY: &str = "APrivateKey1zkp8cC4jgHEBnbtu3xxs1Ndja2EMizcvTRDq5Nikdkukg1p";
@@ -39,6 +42,7 @@ fn test_account() {
     assert_eq!(ALEO_ADDRESS, address.to_string());
 }
 
+#[allow(dead_code)]
 #[wasm_bindgen_test]
 fn test_account_sign() {
     let mut rng = TestRng::default();

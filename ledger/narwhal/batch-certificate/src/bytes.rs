@@ -1,9 +1,10 @@
-// Copyright (C) 2019-2023 Aleo Systems Inc.
+// Copyright 2024 Aleo Network Foundation
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at:
+
 // http://www.apache.org/licenses/LICENSE-2.0
 
 // Unless required by applicable law or agreed to in writing, software
@@ -29,10 +30,10 @@ impl<N: Network> FromBytes for BatchCertificate<N> {
         // Read the number of signatures.
         let num_signatures = u16::read_le(&mut reader)?;
         // Ensure the number of signatures is within bounds.
-        if num_signatures > Self::MAX_SIGNATURES {
+        if num_signatures > Self::max_signatures().map_err(error)? {
             return Err(error(format!(
                 "Number of signatures ({num_signatures}) exceeds the maximum ({})",
-                Self::MAX_SIGNATURES
+                Self::max_signatures().map_err(error)?
             )));
         }
         // Read the signature bytes.

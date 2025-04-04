@@ -1,9 +1,10 @@
-// Copyright (C) 2019-2023 Aleo Systems Inc.
+// Copyright 2024 Aleo Network Foundation
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at:
+
 // http://www.apache.org/licenses/LICENSE-2.0
 
 // Unless required by applicable law or agreed to in writing, software
@@ -32,7 +33,7 @@ impl<N: Network> FromBytes for Block<N> {
         // Read the header.
         let header = FromBytes::read_le(&mut reader)?;
 
-        // Write the authority.
+        // Read the authority.
         let authority = FromBytes::read_le(&mut reader)?;
 
         // Read the number of ratifications.
@@ -44,7 +45,7 @@ impl<N: Network> FromBytes for Block<N> {
         // Read the number of aborted solution IDs.
         let num_aborted_solutions = u32::read_le(&mut reader)?;
         // Ensure the number of aborted solutions IDs is within bounds (this is an early safety check).
-        if num_aborted_solutions as usize > Solutions::<N>::MAX_ABORTED_SOLUTIONS {
+        if num_aborted_solutions as usize > Solutions::<N>::max_aborted_solutions().map_err(error)? {
             return Err(error("Invalid number of aborted solutions IDs in the block"));
         }
         // Read the aborted solution IDs.
@@ -59,7 +60,7 @@ impl<N: Network> FromBytes for Block<N> {
         // Read the number of aborted transaction IDs.
         let num_aborted_transactions = u32::read_le(&mut reader)?;
         // Ensure the number of aborted transaction IDs is within bounds (this is an early safety check).
-        if num_aborted_transactions as usize > Transactions::<N>::MAX_ABORTED_TRANSACTIONS {
+        if num_aborted_transactions as usize > Transactions::<N>::max_aborted_transactions().map_err(error)? {
             return Err(error("Invalid number of aborted transaction IDs in the block"));
         }
         // Read the aborted transaction IDs.

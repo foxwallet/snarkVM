@@ -1,9 +1,10 @@
-// Copyright (C) 2019-2023 Aleo Systems Inc.
+// Copyright 2024 Aleo Network Foundation
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at:
+
 // http://www.apache.org/licenses/LICENSE-2.0
 
 // Unless required by applicable law or agreed to in writing, software
@@ -15,13 +16,14 @@
 #[macro_use]
 extern crate criterion;
 
-use circuit::{collections::kary_merkle_tree::*, AleoV0, Eject, Environment, Inject, Mode};
+use algorithms::snark::varuna::VarunaVersion;
+use circuit::{AleoV0, Eject, Environment, Inject, Mode, collections::kary_merkle_tree::*};
 use console::{
     algorithms::Sha3_256,
     collections::kary_merkle_tree::KaryMerkleTree,
     network::{
-        prelude::{TestRng, ToBits, Uniform},
         MainnetV0,
+        prelude::{TestRng, ToBits, Uniform},
     },
     types::Field,
 };
@@ -101,9 +103,11 @@ fn batch_prove(c: &mut Criterion) {
         let assignments =
             [(proving_key.clone(), (0..*num_assignments).map(|_| assignment.clone()).collect::<Vec<_>>())];
 
+        let varuna_version = VarunaVersion::V1;
         c.bench_function(&format!("KaryMerkleTree batch prove {num_assignments} assignments"), |b| {
             b.iter(|| {
-                let _proof = ProvingKey::prove_batch("ProveKaryMerkleTree", &assignments, &mut rng).unwrap();
+                let _proof =
+                    ProvingKey::prove_batch("ProveKaryMerkleTree", varuna_version, &assignments, &mut rng).unwrap();
             })
         });
     }

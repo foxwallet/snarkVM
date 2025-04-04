@@ -1,9 +1,10 @@
-// Copyright (C) 2019-2023 Aleo Systems Inc.
+// Copyright 2024 Aleo Network Foundation
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at:
+
 // http://www.apache.org/licenses/LICENSE-2.0
 
 // Unless required by applicable law or agreed to in writing, software
@@ -13,12 +14,12 @@
 // limitations under the License.
 
 pub use crate::{
-    io::{Read, Write},
     FromBytes,
     ToBytes,
     Vec,
+    io::{Read, Write},
 };
-use crate::{serialize::traits::*, SerializationError};
+use crate::{SerializationError, serialize::traits::*};
 
 use bincode::Options;
 
@@ -325,7 +326,6 @@ impl<T: Valid + Sync + Send> Valid for Arc<T> {
     }
 
     #[inline]
-
     fn batch_check<'a>(batch: impl Iterator<Item = &'a Self> + Send) -> Result<(), SerializationError>
     where
         Self: 'a,
@@ -345,7 +345,7 @@ impl<T: CanonicalDeserialize + Sync + Send> CanonicalDeserialize for Arc<T> {
     }
 }
 
-impl<'a, T: CanonicalSerialize + ToOwned> CanonicalSerialize for Cow<'a, T> {
+impl<T: CanonicalSerialize + ToOwned> CanonicalSerialize for Cow<'_, T> {
     #[inline]
     fn serialize_with_mode<W: Write>(&self, mut writer: W, compress: Compress) -> Result<(), SerializationError> {
         self.as_ref().serialize_with_mode(&mut writer, compress)
@@ -507,7 +507,7 @@ impl<T: CanonicalSerialize> CanonicalSerialize for [T; 32] {
     }
 }
 
-impl<'a, T: CanonicalSerialize> CanonicalSerialize for &'a [T] {
+impl<T: CanonicalSerialize> CanonicalSerialize for &'_ [T] {
     #[inline]
     fn serialize_with_mode<W: Write>(&self, mut writer: W, compress: Compress) -> Result<(), SerializationError> {
         (*self).serialize_with_mode(&mut writer, compress)

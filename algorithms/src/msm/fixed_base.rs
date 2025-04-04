@@ -1,9 +1,10 @@
-// Copyright (C) 2019-2023 Aleo Systems Inc.
+// Copyright 2024 Aleo Network Foundation
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at:
+
 // http://www.apache.org/licenses/LICENSE-2.0
 
 // Unless required by applicable law or agreed to in writing, software
@@ -14,7 +15,7 @@
 
 use snarkvm_curves::traits::ProjectiveCurve;
 use snarkvm_fields::{FieldParameters, PrimeField};
-use snarkvm_utilities::{cfg_into_iter, cfg_iter, cfg_iter_mut, ToBits};
+use snarkvm_utilities::{ToBits, cfg_into_iter, cfg_iter, cfg_iter_mut};
 
 #[cfg(not(feature = "serial"))]
 use rayon::prelude::*;
@@ -31,7 +32,7 @@ impl FixedBase {
 
     pub fn get_window_table<T: ProjectiveCurve>(scalar_size: usize, window: usize, g: T) -> Vec<Vec<T>> {
         let in_window = 1 << window;
-        let outerc = (scalar_size + window - 1) / window;
+        let outerc = scalar_size.div_ceil(window);
         let last_in_window = 1 << (scalar_size - (outerc - 1) * window);
 
         let mut multiples_of_g = vec![vec![T::zero(); in_window]; outerc];
@@ -89,7 +90,7 @@ impl FixedBase {
         table: &[Vec<T>],
         v: &[T::ScalarField],
     ) -> Vec<T> {
-        let outerc = (scalar_size + window - 1) / window;
+        let outerc = scalar_size.div_ceil(window);
         assert!(outerc <= table.len());
 
         cfg_iter!(v).map(|e| Self::windowed_mul::<T>(outerc, window, table, e)).collect::<Vec<_>>()

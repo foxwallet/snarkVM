@@ -1,9 +1,10 @@
-// Copyright (C) 2019-2023 Aleo Systems Inc.
+// Copyright 2024 Aleo Network Foundation
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at:
+
 // http://www.apache.org/licenses/LICENSE-2.0
 
 // Unless required by applicable law or agreed to in writing, software
@@ -230,7 +231,7 @@ pub mod test_helpers {
     use super::*;
     use console::{network::MainnetV0, prelude::TestRng};
 
-    use indexmap::{indexset, IndexSet};
+    use indexmap::{IndexSet, indexset};
 
     type CurrentNetwork = MainnetV0;
 
@@ -310,7 +311,7 @@ mod tests {
     fn test_max_certificates() {
         // Determine the maximum number of certificates in a block.
         let max_certificates_per_block =
-            BatchHeader::<CurrentNetwork>::MAX_GC_ROUNDS * BatchHeader::<CurrentNetwork>::MAX_CERTIFICATES as usize;
+            BatchHeader::<CurrentNetwork>::MAX_GC_ROUNDS * CurrentNetwork::LATEST_MAX_CERTIFICATES().unwrap() as usize;
 
         // Note: The maximum number of certificates in a block must be able to be Merklized.
         assert!(

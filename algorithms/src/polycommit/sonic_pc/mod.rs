@@ -1,9 +1,10 @@
-// Copyright (C) 2019-2023 Aleo Systems Inc.
+// Copyright 2024 Aleo Network Foundation
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at:
+
 // http://www.apache.org/licenses/LICENSE-2.0
 
 // Unless required by applicable law or agreed to in writing, software
@@ -13,18 +14,18 @@
 // limitations under the License.
 
 use crate::{
+    AlgebraicSponge,
     fft::DensePolynomial,
     msm::variable_base::VariableBase,
-    polycommit::{kzg10, optional_rng::OptionalRng, PCError},
+    polycommit::{PCError, kzg10, optional_rng::OptionalRng},
     srs::{UniversalProver, UniversalVerifier},
-    AlgebraicSponge,
 };
 use hashbrown::HashMap;
 use itertools::Itertools;
 use snarkvm_curves::traits::{AffineCurve, PairingCurve, PairingEngine, ProjectiveCurve};
 use snarkvm_fields::{One, Zero};
 
-use anyhow::{bail, ensure, Result};
+use anyhow::{Result, bail, ensure};
 use core::{convert::TryInto, marker::PhantomData, ops::Mul};
 use rand_core::{RngCore, SeedableRng};
 use std::{
@@ -40,9 +41,9 @@ pub use polynomial::*;
 
 /// Polynomial commitment based on [\[KZG10\]][kzg], with degree enforcement and
 /// batching taken from [[MBKM19, “Sonic”]][sonic] (more precisely, their
-/// counterparts in [[Gabizon19, “AuroraLight”]][al] that avoid negative G1 powers).
-/// The (optional) hiding property of the commitment scheme follows the approach
-/// described in [[CHMMVW20, “Marlin”]][marlin].
+/// counterparts in [[Gabizon19, “AuroraLight”]][al] that avoid negative G1
+/// powers). The (optional) hiding property of the commitment scheme follows the
+/// approach described in [[CHMMVW20, “Marlin”]][marlin].
 ///
 /// [kzg]: http://cacr.uwaterloo.ca/techreports/2010/cacr2010-10.pdf
 /// [sonic]: https://eprint.iacr.org/2019/099
@@ -100,7 +101,8 @@ impl<E: PairingEngine, S: AlgebraicSponge<E::Fq, 2>> SonicKZG10<E, S> {
                 // Also add degree 0.
                 for degree_bound in enforced_degree_bounds {
                     let shift_degree = max_degree - degree_bound;
-                    // We have an additional degree in `powers_of_beta_times_gamma_g` beyond `powers_of_beta_g`.
+                    // We have an additional degree in `powers_of_beta_times_gamma_g` beyond
+                    // `powers_of_beta_g`.
                     let powers_for_degree_bound = pp
                         .powers_of_beta_times_gamma_g()
                         .range(shift_degree..max_degree.min(shift_degree + supported_hiding_bound) + 2)
@@ -165,7 +167,8 @@ impl<E: PairingEngine, S: AlgebraicSponge<E::Fq, 2>> SonicKZG10<E, S> {
     /// If `polynomials[i].is_hiding()`, then the `i`-th commitment is hiding
     /// up to `polynomials.hiding_bound()` queries.
     ///
-    /// `rng` should not be `None` if `polynomials[i].is_hiding() == true` for any `i`.
+    /// `rng` should not be `None` if `polynomials[i].is_hiding() == true` for
+    /// any `i`.
     ///
     /// If for some `i`, `polynomials[i].is_hiding() == false`, then the
     /// corresponding randomness is `Randomness<E>::empty()`.
@@ -280,8 +283,9 @@ impl<E: PairingEngine, S: AlgebraicSponge<E::Fq, 2>> SonicKZG10<E, S> {
         Ok(Self::combine_polynomials(to_combine))
     }
 
-    /// On input a list of labeled polynomials and a query set, `open` outputs a proof of evaluation
-    /// of the polynomials at the points in the query set.
+    /// On input a list of labeled polynomials and a query set, `open` outputs a
+    /// proof of evaluation of the polynomials at the points in the query
+    /// set.
     pub fn batch_open<'a>(
         universal_prover: &UniversalProver<E>,
         ck: &CommitterUnionKey<E>,
@@ -437,7 +441,8 @@ impl<E: PairingEngine, S: AlgebraicSponge<E::Fq, 2>> SonicKZG10<E, S> {
             let mut hiding_bound = None;
 
             let num_polys = lc.len();
-            // We filter out l.is_one() entries because those constants are not committed to and used directly by the verifier.
+            // We filter out l.is_one() entries because those constants are not committed to
+            // and used directly by the verifier.
             for (coeff, label) in lc.iter().filter(|(_, l)| !l.is_one()) {
                 let label: &String = label.try_into().expect("cannot be one!");
                 let (cur_poly, cur_rand) =
@@ -471,8 +476,8 @@ impl<E: PairingEngine, S: AlgebraicSponge<E::Fq, 2>> SonicKZG10<E, S> {
         Ok(BatchLCProof { proof })
     }
 
-    /// Checks that `values` are the true evaluations at `query_set` of the polynomials
-    /// committed in `labeled_commitments`.
+    /// Checks that `values` are the true evaluations at `query_set` of the
+    /// polynomials committed in `labeled_commitments`.
     pub fn check_combinations<'a>(
         vk: &UniversalVerifier<E>,
         linear_combinations: impl IntoIterator<Item = &'a LinearCombination<E::Fr>>,
@@ -594,7 +599,8 @@ impl<E: PairingEngine, S: AlgebraicSponge<E::Fq, 2>> SonicKZG10<E, S> {
         // Keeps track of running combination of values
         let mut combined_values = E::Fr::zero();
 
-        // Iterates through all of the commitments and accumulates common degree_bound elements in a BTreeMap
+        // Iterates through all of the commitments and accumulates common degree_bound
+        // elements in a BTreeMap
         ensure!(commitments.len() == values.len());
         for (labeled_comm, value) in commitments.into_iter().zip_eq(values) {
             let acc_timer = start_timer!(|| format!("Accumulating {}", labeled_comm.label()));
@@ -614,7 +620,8 @@ impl<E: PairingEngine, S: AlgebraicSponge<E::Fq, 2>> SonicKZG10<E, S> {
             end_timer!(acc_timer);
         }
 
-        // Push expected results into list of elems. Power will be the negative of the expected power
+        // Push expected results into list of elems. Power will be the negative of the
+        // expected power
         let mut bases = vec![vk.vk.g, -proof.w];
         let mut coeffs = vec![combined_values, point];
         if let Some(random_v) = proof.random_v {
@@ -684,7 +691,7 @@ mod tests {
     use super::{CommitterKey, SonicKZG10};
     use crate::{crypto_hash::PoseidonSponge, polycommit::test_templates::*};
     use snarkvm_curves::bls12_377::{Bls12_377, Fq};
-    use snarkvm_utilities::{rand::TestRng, FromBytes, ToBytes};
+    use snarkvm_utilities::{FromBytes, ToBytes, rand::TestRng};
 
     use rand::distributions::Distribution;
 

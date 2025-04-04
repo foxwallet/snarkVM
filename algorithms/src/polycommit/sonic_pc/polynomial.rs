@@ -1,9 +1,10 @@
-// Copyright (C) 2019-2023 Aleo Systems Inc.
+// Copyright 2024 Aleo Network Foundation
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at:
+
 // http://www.apache.org/licenses/LICENSE-2.0
 
 // Unless required by applicable law or agreed to in writing, software
@@ -15,7 +16,7 @@
 use super::PolynomialLabel;
 use crate::fft::{DensePolynomial, EvaluationDomain, Evaluations as EvaluationsOnDomain, Polynomial, SparsePolynomial};
 use snarkvm_fields::{Field, PrimeField};
-use snarkvm_utilities::{cfg_iter, cfg_iter_mut, CanonicalDeserialize, CanonicalSerialize};
+use snarkvm_utilities::{CanonicalDeserialize, CanonicalSerialize, cfg_iter, cfg_iter_mut};
 
 use anyhow::Result;
 use std::borrow::Cow;
@@ -60,8 +61,9 @@ impl PolynomialInfo {
 }
 
 /// A polynomial along with information about its degree bound (if any), and the
-/// maximum number of queries that will be made to it. This latter number determines
-/// the amount of protection that will be provided to a commitment for this polynomial.
+/// maximum number of queries that will be made to it. This latter number
+/// determines the amount of protection that will be provided to a commitment
+/// for this polynomial.
 #[derive(Debug, Clone, CanonicalSerialize, CanonicalDeserialize, PartialEq, Eq)]
 pub struct LabeledPolynomial<F: Field> {
     pub info: PolynomialInfo,
@@ -134,9 +136,6 @@ impl<F: Field> LabeledPolynomial<F> {
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////////
 
 #[derive(Debug, Clone)]
 pub struct LabeledPolynomialWithBasis<'a, F: PrimeField> {
@@ -182,7 +181,8 @@ impl<'a, F: PrimeField> LabeledPolynomialWithBasis<'a, F> {
         &self.info.label
     }
 
-    /// Return the information about the label, degree bound, and hiding bound of `self`.
+    /// Return the information about the label, degree bound, and hiding bound
+    /// of `self`.
     pub fn info(&self) -> &PolynomialInfo {
         &self.info
     }
@@ -228,7 +228,7 @@ impl<'a, F: PrimeField> From<&'a LabeledPolynomial<F>> for LabeledPolynomialWith
     }
 }
 
-impl<'a, F: PrimeField> From<LabeledPolynomial<F>> for LabeledPolynomialWithBasis<'a, F> {
+impl<F: PrimeField> From<LabeledPolynomial<F>> for LabeledPolynomialWithBasis<'_, F> {
     fn from(other: LabeledPolynomial<F>) -> Self {
         let polynomial = PolynomialWithBasis::Monomial {
             polynomial: Cow::Owned(other.polynomial),

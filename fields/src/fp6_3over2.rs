@@ -1,9 +1,10 @@
-// Copyright (C) 2019-2023 Aleo Systems Inc.
+// Copyright 2024 Aleo Network Foundation
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at:
+
 // http://www.apache.org/licenses/LICENSE-2.0
 
 // Unless required by applicable law or agreed to in writing, software
@@ -14,16 +15,16 @@
 
 use crate::{Field, Fp2, Fp2Parameters, One, Zero};
 use snarkvm_utilities::{
-    rand::Uniform,
-    serialize::{SerializationError, *},
     FromBytes,
     ToBits,
     ToBytes,
+    rand::Uniform,
+    serialize::{SerializationError, *},
 };
 
 use rand::{
-    distributions::{Distribution, Standard},
     Rng,
+    distributions::{Distribution, Standard},
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -323,7 +324,7 @@ impl<P: Fp6Parameters> Neg for Fp6<P> {
 impl_add_sub_from_field_ref!(Fp6, Fp6Parameters);
 impl_mul_div_from_field_ref!(Fp6, Fp6Parameters);
 
-impl<'a, P: Fp6Parameters> Add<&'a Self> for Fp6<P> {
+impl<P: Fp6Parameters> Add<&'_ Self> for Fp6<P> {
     type Output = Self;
 
     #[inline]
@@ -334,7 +335,7 @@ impl<'a, P: Fp6Parameters> Add<&'a Self> for Fp6<P> {
     }
 }
 
-impl<'a, P: Fp6Parameters> Sub<&'a Self> for Fp6<P> {
+impl<P: Fp6Parameters> Sub<&'_ Self> for Fp6<P> {
     type Output = Self;
 
     #[inline]
@@ -345,7 +346,7 @@ impl<'a, P: Fp6Parameters> Sub<&'a Self> for Fp6<P> {
     }
 }
 
-impl<'a, P: Fp6Parameters> Mul<&'a Self> for Fp6<P> {
+impl<P: Fp6Parameters> Mul<&'_ Self> for Fp6<P> {
     type Output = Self;
 
     #[inline]
@@ -356,7 +357,7 @@ impl<'a, P: Fp6Parameters> Mul<&'a Self> for Fp6<P> {
     }
 }
 
-impl<'a, P: Fp6Parameters> Div<&'a Self> for Fp6<P> {
+impl<P: Fp6Parameters> Div<&'_ Self> for Fp6<P> {
     type Output = Self;
 
     #[inline]
@@ -367,7 +368,7 @@ impl<'a, P: Fp6Parameters> Div<&'a Self> for Fp6<P> {
     }
 }
 
-impl<'a, P: Fp6Parameters> AddAssign<&'a Self> for Fp6<P> {
+impl<P: Fp6Parameters> AddAssign<&'_ Self> for Fp6<P> {
     #[inline]
     fn add_assign(&mut self, other: &Self) {
         self.c0 += &other.c0;
@@ -376,7 +377,7 @@ impl<'a, P: Fp6Parameters> AddAssign<&'a Self> for Fp6<P> {
     }
 }
 
-impl<'a, P: Fp6Parameters> SubAssign<&'a Self> for Fp6<P> {
+impl<P: Fp6Parameters> SubAssign<&'_ Self> for Fp6<P> {
     #[inline]
     fn sub_assign(&mut self, other: &Self) {
         self.c0 -= &other.c0;
@@ -385,7 +386,7 @@ impl<'a, P: Fp6Parameters> SubAssign<&'a Self> for Fp6<P> {
     }
 }
 
-impl<'a, P: Fp6Parameters> MulAssign<&'a Self> for Fp6<P> {
+impl<P: Fp6Parameters> MulAssign<&'_ Self> for Fp6<P> {
     #[inline]
     fn mul_assign(&mut self, other: &Self) {
         let v0 = self.c0 * other.c0;
@@ -402,14 +403,14 @@ impl<'a, P: Fp6Parameters> MulAssign<&'a Self> for Fp6<P> {
     }
 }
 
-impl<'a, P: Fp6Parameters> DivAssign<&'a Self> for Fp6<P> {
+impl<P: Fp6Parameters> DivAssign<&'_ Self> for Fp6<P> {
     #[inline]
     fn div_assign(&mut self, other: &Self) {
         self.mul_assign(&other.inverse().unwrap());
     }
 }
 
-impl<'a, P: Fp6Parameters> From<&'a [bool]> for Fp6<P> {
+impl<P: Fp6Parameters> From<&'_ [bool]> for Fp6<P> {
     fn from(_bits: &[bool]) -> Self {
         unimplemented!()
     }
@@ -518,7 +519,6 @@ impl<P: Fp6Parameters> CanonicalSerializeWithFlags for Fp6<P> {
 
 impl<P: Fp6Parameters> CanonicalSerialize for Fp6<P> {
     #[inline]
-
     fn serialize_with_mode<W: Write>(&self, writer: W, _compress: Compress) -> Result<(), SerializationError> {
         self.serialize_with_flags(writer, EmptyFlags)
     }

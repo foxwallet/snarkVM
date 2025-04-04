@@ -1,9 +1,10 @@
-// Copyright (C) 2019-2023 Aleo Systems Inc.
+// Copyright 2024 Aleo Network Foundation
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at:
+
 // http://www.apache.org/licenses/LICENSE-2.0
 
 // Unless required by applicable law or agreed to in writing, software
@@ -12,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{CanaryCircuit, Circuit, LinearCombination, TestnetCircuit, Variable, R1CS};
+use crate::{CanaryCircuit, Circuit, LinearCombination, R1CS, TestnetCircuit, Variable};
 use snarkvm_curves::edwards_bls12::Fq;
 use snarkvm_fields::PrimeField;
 
@@ -200,7 +201,7 @@ impl<F: PrimeField> R1CS<F> {
 
 #[cfg(test)]
 mod tests {
-    use snarkvm_algorithms::{r1cs::ConstraintSynthesizer, AlgebraicSponge, SNARK};
+    use snarkvm_algorithms::{AlgebraicSponge, SNARK, r1cs::ConstraintSynthesizer, snark::varuna::VarunaVersion};
     use snarkvm_circuit::prelude::*;
     use snarkvm_curves::bls12_377::Fr;
 
@@ -252,7 +253,7 @@ mod tests {
 
         use snarkvm_algorithms::{
             crypto_hash::PoseidonSponge,
-            snark::varuna::{ahp::AHPForR1CS, VarunaHidingMode, VarunaSNARK},
+            snark::varuna::{VarunaHidingMode, VarunaSNARK, ahp::AHPForR1CS},
         };
         use snarkvm_curves::bls12_377::{Bls12_377, Fq};
         use snarkvm_utilities::rand::TestRng;
@@ -269,14 +270,20 @@ mod tests {
         let fs_pp = FS::sample_parameters();
 
         let (index_pk, index_vk) = VarunaInst::circuit_setup(&universal_srs, &Circuit).unwrap();
+        let varuna_version = VarunaVersion::V2;
         println!("Called circuit setup");
 
-        let proof = VarunaInst::prove(universal_prover, &fs_pp, &index_pk, &Circuit, rng).unwrap();
+        let proof = VarunaInst::prove(universal_prover, &fs_pp, &index_pk, varuna_version, &Circuit, rng).unwrap();
         println!("Called prover");
 
-        assert!(VarunaInst::verify(universal_verifier, &fs_pp, &index_vk, [*one, *one], &proof).unwrap());
+        assert!(
+            VarunaInst::verify(universal_verifier, &fs_pp, &index_vk, varuna_version, [*one, *one], &proof).unwrap()
+        );
         println!("Called verifier");
         println!("\nShould not verify (i.e. verifier messages should print below):");
-        assert!(!VarunaInst::verify(universal_verifier, &fs_pp, &index_vk, [*one, *one + *one], &proof).unwrap());
+        assert!(
+            !VarunaInst::verify(universal_verifier, &fs_pp, &index_vk, varuna_version, [*one, *one + *one], &proof)
+                .unwrap()
+        );
     }
 }

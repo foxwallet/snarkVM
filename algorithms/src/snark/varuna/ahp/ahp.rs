@@ -1,9 +1,10 @@
-// Copyright (C) 2019-2023 Aleo Systems Inc.
+// Copyright 2024 Aleo Network Foundation
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at:
+
 // http://www.apache.org/licenses/LICENSE-2.0
 
 // Unless required by applicable law or agreed to in writing, software
@@ -14,20 +15,21 @@
 
 use crate::{
     fft::{
-        domain::{FFTPrecomputation, IFFTPrecomputation},
         EvaluationDomain,
+        domain::{FFTPrecomputation, IFFTPrecomputation},
     },
     polycommit::sonic_pc::{LCTerm, LabeledPolynomial, LinearCombination},
     r1cs::SynthesisError,
     snark::varuna::{
-        ahp::{verifier, AHPError, CircuitId, CircuitInfo},
+        SNARKMode,
+        VarunaVersion,
+        ahp::{AHPError, CircuitId, CircuitInfo, verifier},
         prover,
         selectors::precompute_selectors,
-        verifier::QueryPoints,
-        SNARKMode,
+        verifier::{QueryPoints, select_third_round_challenges},
     },
 };
-use anyhow::{anyhow, ensure, Result};
+use anyhow::{Result, anyhow, ensure};
 use snarkvm_fields::{Field, PrimeField};
 
 use core::{borrow::Borrow, marker::PhantomData};
@@ -57,14 +59,16 @@ pub(crate) struct NonZeroDomains<F: PrimeField> {
 
 impl<F: PrimeField, SM: SNARKMode> AHPForR1CS<F, SM> {
     /// The linear combinations that are statically known to evaluate to zero.
-    /// These correspond to the virtual commitments as noted in the Aleo varuna protocol docs
+    /// These correspond to the virtual commitments as noted in the Aleo varuna
+    /// protocol docs
     pub const LC_WITH_ZERO_EVAL: [&'static str; 3] = ["matrix_sumcheck", "lineval_sumcheck", "rowcheck_zerocheck"];
 
     pub fn zk_bound() -> Option<usize> {
         SM::ZK.then_some(1)
     }
 
-    /// Check that the (formatted) public input is of the form 2^n for some integer n.
+    /// Check that the (formatted) public input is of the form 2^n for some
+    /// integer n.
     pub fn num_formatted_public_inputs_is_admissible(num_inputs: usize) -> Result<(), AHPError> {
         match num_inputs.count_ones() == 1 {
             true => Ok(()),
@@ -72,7 +76,8 @@ impl<F: PrimeField, SM: SNARKMode> AHPForR1CS<F, SM> {
         }
     }
 
-    /// Check that the (formatted) public input is of the form 2^n for some integer n.
+    /// Check that the (formatted) public input is of the form 2^n for some
+    /// integer n.
     pub fn formatted_public_input_is_admissible(input: &[F]) -> Result<(), AHPError> {
         Self::num_formatted_public_inputs_is_admissible(input.len())
     }
@@ -164,10 +169,12 @@ impl<F: PrimeField, SM: SNARKMode> AHPForR1CS<F, SM> {
 
     /// Construct the linear combinations that are checked by the AHP.
     /// Public input should be unformatted.
-    /// We construct the linear combinations as per section 5 of our protocol documentation.
-    /// We can distinguish between:
-    /// (1) simple commitments: $\{\cm{g_A}, \cm{g_B}, \cm{g_C}\}$ and $\{\cm{\hat{z}_{B,i,j}}\}_{i \in {[\mathcal{D}]}}$, $\cm{g_1}$
-    /// (2) virtual commitments for the lincheck_sumcheck and matrix_sumcheck. These are linear combinations of the simple commitments
+    /// We construct the linear combinations as per section 5 of our protocol
+    /// documentation. We can distinguish between:
+    /// (1) simple commitments: $\{\cm{g_A}, \cm{g_B}, \cm{g_C}\}$ and
+    /// $\{\cm{\hat{z}_{B,i,j}}\}_{i \in {[\mathcal{D}]}}$, $\cm{g_1}$
+    /// (2) virtual commitments for the lincheck_sumcheck and matrix_sumcheck.
+    /// These are linear combinations of the simple commitments
     #[allow(non_snake_case)]
     pub fn construct_linear_combinations<E: EvaluationsProvider<F>>(
         public_inputs: &BTreeMap<CircuitId, Vec<Vec<F>>>,
@@ -175,6 +182,7 @@ impl<F: PrimeField, SM: SNARKMode> AHPForR1CS<F, SM> {
         prover_third_message: &prover::ThirdMessage<F>,
         prover_fourth_message: &prover::FourthMessage<F>,
         state: &verifier::State<F, SM>,
+        varuna_version: VarunaVersion,
     ) -> Result<BTreeMap<String, LinearCombination<F>>> {
         ensure!(!public_inputs.is_empty());
         let max_constraint_domain = state.max_constraint_domain;
@@ -195,11 +203,20 @@ impl<F: PrimeField, SM: SNARKMode> AHPForR1CS<F, SM> {
             formatted_public_inputs.push(public_inputs_i);
         }
 
-        let verifier::FirstMessage { batch_combiners } = state.first_round_message.as_ref().unwrap();
-        let verifier::SecondMessage { alpha, eta_b, eta_c } = state.second_round_message.unwrap();
+        let verifier::FirstMessage { first_round_batch_combiners } = state.first_round_message.as_ref().unwrap();
         let verifier::ThirdMessage { beta } = state.third_round_message.unwrap();
+
+        // Choose challenges based on the proof system version.
+        let (alpha, third_round_batch_combiners, eta_b, eta_c) = select_third_round_challenges(
+            state.first_round_message.as_ref().unwrap(),
+            state.second_round_message.as_ref().unwrap(),
+            state.prepare_third_round_message.as_ref(),
+            varuna_version,
+        )
+        .map_err(AHPError::AnyhowError)?;
+
         let batch_lineval_sum =
-            prover_third_message.sum(batch_combiners, eta_b, eta_c) * state.max_variable_domain.size_inv;
+            prover_third_message.sum(&third_round_batch_combiners, eta_b, eta_c) * state.max_variable_domain.size_inv;
         let verifier::FourthMessage { delta_a, delta_b, delta_c } = state.fourth_round_message.as_ref().unwrap();
         let sums_fourth_msg = &prover_fourth_message.sums;
         let gamma = state.gamma.unwrap();
@@ -228,7 +245,7 @@ impl<F: PrimeField, SM: SNARKMode> AHPForR1CS<F, SM> {
 
         let rowcheck_zerocheck = {
             let mut rowcheck_zerocheck = LinearCombination::empty("rowcheck_zerocheck");
-            for (i, (id, c)) in batch_combiners.iter().enumerate() {
+            for (i, (id, c)) in first_round_batch_combiners.iter().enumerate() {
                 let mut circuit_term = LinearCombination::empty(format!("rowcheck_zerocheck term {id}"));
                 let third_sums_i = &prover_third_message.sums[i];
                 let circuit_state = &state.circuit_specific_states[id];
@@ -299,7 +316,7 @@ impl<F: PrimeField, SM: SNARKMode> AHPForR1CS<F, SM> {
             if SM::ZK {
                 lineval_sumcheck.add(F::one(), "mask_poly");
             }
-            for (i, (id, c)) in batch_combiners.iter().enumerate() {
+            for (i, (id, c)) in third_round_batch_combiners.iter().enumerate() {
                 let mut circuit_term = LinearCombination::empty(format!("lineval_sumcheck term {id}"));
                 let fourth_sums_i = &sums_fourth_msg[i];
                 let circuit_state = &state.circuit_specific_states[id];
@@ -416,7 +433,8 @@ impl<F: PrimeField, SM: SNARKMode> AHPForR1CS<F, SM> {
         let label_b_poly = format!("circuit_{id}_b_poly_{matrix}");
         let QueryPoints { alpha, beta, gamma } = challenges;
 
-        // When running as the prover, who has access to a(X) and b(X), we directly return those
+        // When running as the prover, who has access to a(X) and b(X), we directly
+        // return those
         let a_poly = LinearCombination::new(label_a_poly.clone(), [(F::one(), label_a_poly.clone())]);
         let a_poly_eval_available = evals.get_lc_eval(&a_poly, gamma).is_ok();
         let b_poly = LinearCombination::new(label_b_poly.clone(), [(F::one(), label_b_poly.clone())]);
@@ -426,7 +444,8 @@ impl<F: PrimeField, SM: SNARKMode> AHPForR1CS<F, SM> {
             return Ok((a_poly, b_poly));
         };
 
-        // When running as the verifier, we need to construct a(X) and b(X) from the indexing polynomials
+        // When running as the verifier, we need to construct a(X) and b(X) from the
+        // indexing polynomials
         let label_col = format!("circuit_{id}_col_{matrix}");
         let label_row = format!("circuit_{id}_row_{matrix}");
         let label_row_col = format!("circuit_{id}_row_col_{matrix}");
@@ -444,10 +463,12 @@ impl<F: PrimeField, SM: SNARKMode> AHPForR1CS<F, SM> {
     }
 }
 
-/// Abstraction that provides evaluations of (linear combinations of) polynomials
+/// Abstraction that provides evaluations of (linear combinations of)
+/// polynomials
 ///
 /// Intended to provide a common interface for both the prover and the verifier
-/// when constructing linear combinations via `AHPForR1CS::construct_linear_combinations`.
+/// when constructing linear combinations via
+/// `AHPForR1CS::construct_linear_combinations`.
 pub trait EvaluationsProvider<F: PrimeField>: core::fmt::Debug {
     /// Get the evaluation of linear combination `lc` at `point`.
     fn get_lc_eval(&self, lc: &LinearCombination<F>, point: F) -> Result<F>;

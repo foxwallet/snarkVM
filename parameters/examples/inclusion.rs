@@ -1,9 +1,10 @@
-// Copyright (C) 2019-2023 Aleo Systems Inc.
+// Copyright 2024 Aleo Network Foundation
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at:
+
 // http://www.apache.org/licenses/LICENSE-2.0
 
 // Unless required by applicable law or agreed to in writing, software
@@ -12,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use snarkvm_algorithms::crypto_hash::sha256::sha256;
+use snarkvm_algorithms::{crypto_hash::sha256::sha256, snark::varuna::VarunaVersion};
 use snarkvm_circuit::{Aleo, Assignment};
 use snarkvm_console::{
     account::PrivateKey,
@@ -21,12 +22,12 @@ use snarkvm_console::{
     program::{Plaintext, Record, StatePath},
     types::Field,
 };
-use snarkvm_ledger_store::{helpers::memory::ConsensusMemory, ConsensusStore};
-use snarkvm_synthesizer::{process::InclusionAssignment, snark::UniversalSRS, VM};
+use snarkvm_ledger_store::{ConsensusStore, helpers::memory::ConsensusMemory};
+use snarkvm_synthesizer::{VM, process::InclusionAssignment, snark::UniversalSRS};
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use rand::thread_rng;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::{
     fs::File,
     io::{BufWriter, Write},
@@ -115,13 +116,25 @@ pub fn inclusion<N: Network, A: Aleo<Network = N>>() -> Result<()> {
     let inclusion_function_name = N::INCLUSION_FUNCTION_NAME;
     let (proving_key, verifying_key) = universal_srs.to_circuit_key(inclusion_function_name, &assignment)?;
 
-    // Ensure the proving key and verifying keys are valid.
-    let proof = proving_key.prove(inclusion_function_name, &assignment, &mut thread_rng())?;
-    assert!(verifying_key.verify(
-        inclusion_function_name,
-        &[N::Field::one(), **state_path.global_state_root(), *Field::<N>::zero(), *serial_number],
-        &proof
-    ));
+    for varuna_version in [VarunaVersion::V1, VarunaVersion::V2] {
+        // Ensure the proving key and verifying keys are valid.
+        let proof = proving_key.prove(inclusion_function_name, varuna_version, &assignment, &mut thread_rng())?;
+        assert!(verifying_key.verify(
+            inclusion_function_name,
+            varuna_version,
+            &[N::Field::one(), **state_path.global_state_root(), *Field::<N>::zero(), *serial_number],
+            &proof
+        ));
+        // Ensure using the wrong varuna version is not valid.
+        let wrong_varuna_version =
+            if varuna_version == VarunaVersion::V1 { VarunaVersion::V2 } else { VarunaVersion::V1 };
+        assert!(!verifying_key.verify(
+            inclusion_function_name,
+            wrong_varuna_version,
+            &[N::Field::one(), **state_path.global_state_root(), *Field::<N>::zero(), *serial_number],
+            &proof
+        ));
+    }
 
     // Initialize a vector for the commands.
     let mut commands = vec![];

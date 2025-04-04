@@ -1,9 +1,10 @@
-// Copyright (C) 2019-2023 Aleo Systems Inc.
+// Copyright 2024 Aleo Network Foundation
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at:
+
 // http://www.apache.org/licenses/LICENSE-2.0
 
 // Unless required by applicable law or agreed to in writing, software
@@ -13,19 +14,19 @@
 // limitations under the License.
 
 use crate::{
-    fft::{DensePolynomial, EvaluationDomain},
     AlgebraicSponge,
+    fft::{DensePolynomial, EvaluationDomain},
 };
 use snarkvm_curves::{AffineCurve, PairingCurve, PairingEngine, ProjectiveCurve};
 use snarkvm_fields::{ConstraintFieldError, ToConstraintField, Zero};
 use snarkvm_parameters::mainnet::PowersOfG;
 use snarkvm_utilities::{
+    FromBytes,
+    ToBytes,
     borrow::Cow,
     error,
     io::{Read, Write},
     serialize::{CanonicalDeserialize, CanonicalSerialize, Compress, SerializationError, Valid, Validate},
-    FromBytes,
-    ToBytes,
 };
 
 use crate::srs::{UniversalProver, UniversalVerifier};
@@ -37,9 +38,10 @@ use std::{collections::BTreeMap, io, ops::Range, sync::Arc};
 /// `UniversalParams` are the universal parameters for the KZG10 scheme.
 #[derive(Clone, Debug)]
 pub struct UniversalParams<E: PairingEngine> {
-    /// Group elements of the form `{ \beta^i G }`, where `i` ranges from 0 to `degree`,
-    /// and group elements of the form `{ \beta^i \gamma G }`, where `i` ranges from 0 to `degree`.
-    /// This struct provides an abstraction over the powers which are located on-disk
+    /// Group elements of the form `{ \beta^i G }`, where `i` ranges from 0 to
+    /// `degree`, and group elements of the form `{ \beta^i \gamma G }`,
+    /// where `i` ranges from 0 to `degree`. This struct provides an
+    /// abstraction over the powers which are located on-disk
     /// to reduce memory usage.
     powers: Arc<PowersOfG<E>>,
     /// The generator of G2.
@@ -145,7 +147,8 @@ impl<E: PairingEngine> ToBytes for UniversalParams<E> {
     }
 }
 
-/// `Powers` is used to commit to and create evaluation proofs for a given polynomial.
+/// `Powers` is used to commit to and create evaluation proofs for a given
+/// polynomial.
 #[derive(Clone, Debug, Default, Hash)]
 pub struct Powers<'a, E: PairingEngine> {
     /// Group elements of the form `β^i G`, for different values of `i`.
@@ -160,7 +163,8 @@ impl<E: PairingEngine> Powers<'_, E> {
         self.powers_of_beta_g.len()
     }
 }
-/// `LagrangeBasis` is used to commit to and create evaluation proofs for a given polynomial.
+/// `LagrangeBasis` is used to commit to and create evaluation proofs for a
+/// given polynomial.
 #[derive(Clone, Debug, Hash)]
 pub struct LagrangeBasis<'a, E: PairingEngine> {
     /// Group elements of the form `β^i G`, for different values of `i`.
@@ -307,7 +311,8 @@ impl<E: PairingEngine> ToConstraintField<E::Fq> for KZGCommitment<E> {
     }
 }
 
-/// `KZGRandomness` hides the polynomial inside a commitment. It is output by `KZG10::commit`.
+/// `KZGRandomness` hides the polynomial inside a commitment. It is output by
+/// `KZG10::commit`.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash, CanonicalSerialize, CanonicalDeserialize)]
 pub struct KZGRandomness<E: PairingEngine> {
     /// For KZG10, the commitment randomness is a random polynomial.
@@ -328,8 +333,9 @@ impl<E: PairingEngine> ToBytes for KZGRandomness<E> {
 }
 
 impl<E: PairingEngine> KZGRandomness<E> {
-    /// Does `self` provide any hiding properties to the corresponding commitment?
-    /// `self.is_hiding() == true` only if the underlying polynomial is non-zero.
+    /// Does `self` provide any hiding properties to the corresponding
+    /// commitment? `self.is_hiding() == true` only if the underlying
+    /// polynomial is non-zero.
     #[inline]
     pub fn is_hiding(&self) -> bool {
         !self.blinding_polynomial.is_zero()
@@ -392,7 +398,8 @@ impl<'a, E: PairingEngine> AddAssign<(E::Fr, &'a KZGRandomness<E>)> for KZGRando
 /// `KZGProof` is an evaluation proof that is output by `KZG10::open`.
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash, CanonicalSerialize, CanonicalDeserialize)]
 pub struct KZGProof<E: PairingEngine> {
-    /// This is a commitment to the witness polynomial; see [\[KZG10\]][kzg] for more details.
+    /// This is a commitment to the witness polynomial; see [\[KZG10\]][kzg] for
+    /// more details.
     ///
     /// [kzg]: http://cacr.uwaterloo.ca/techreports/2010/cacr2010-10.pdf
     pub w: E::G1Affine,

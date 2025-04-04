@@ -1,9 +1,10 @@
-// Copyright (C) 2019-2023 Aleo Systems Inc.
+// Copyright 2024 Aleo Network Foundation
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at:
+
 // http://www.apache.org/licenses/LICENSE-2.0
 
 // Unless required by applicable law or agreed to in writing, software
@@ -12,12 +13,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{fp6_3over2::*, Field, Fp2, Fp2Parameters, One, Zero};
-use snarkvm_utilities::{bititerator::BitIteratorBE, rand::Uniform, serialize::*, FromBytes, ToBits, ToBytes};
+use crate::{Field, Fp2, Fp2Parameters, One, Zero, fp6_3over2::*};
+use snarkvm_utilities::{FromBytes, ToBits, ToBytes, bititerator::BitIteratorBE, rand::Uniform, serialize::*};
 
 use rand::{
-    distributions::{Distribution, Standard},
     Rng,
+    distributions::{Distribution, Standard},
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -345,7 +346,7 @@ impl<P: Fp12Parameters> Neg for Fp12<P> {
 impl_add_sub_from_field_ref!(Fp12, Fp12Parameters);
 impl_mul_div_from_field_ref!(Fp12, Fp12Parameters);
 
-impl<'a, P: Fp12Parameters> Add<&'a Self> for Fp12<P> {
+impl<P: Fp12Parameters> Add<&'_ Self> for Fp12<P> {
     type Output = Self;
 
     #[inline]
@@ -356,7 +357,7 @@ impl<'a, P: Fp12Parameters> Add<&'a Self> for Fp12<P> {
     }
 }
 
-impl<'a, P: Fp12Parameters> Sub<&'a Self> for Fp12<P> {
+impl<P: Fp12Parameters> Sub<&'_ Self> for Fp12<P> {
     type Output = Self;
 
     #[inline]
@@ -367,7 +368,7 @@ impl<'a, P: Fp12Parameters> Sub<&'a Self> for Fp12<P> {
     }
 }
 
-impl<'a, P: Fp12Parameters> Mul<&'a Self> for Fp12<P> {
+impl<P: Fp12Parameters> Mul<&'_ Self> for Fp12<P> {
     type Output = Self;
 
     #[inline]
@@ -378,7 +379,7 @@ impl<'a, P: Fp12Parameters> Mul<&'a Self> for Fp12<P> {
     }
 }
 
-impl<'a, P: Fp12Parameters> Div<&'a Self> for Fp12<P> {
+impl<P: Fp12Parameters> Div<&'_ Self> for Fp12<P> {
     type Output = Self;
 
     #[inline]
@@ -389,7 +390,7 @@ impl<'a, P: Fp12Parameters> Div<&'a Self> for Fp12<P> {
     }
 }
 
-impl<'a, P: Fp12Parameters> AddAssign<&'a Self> for Fp12<P> {
+impl<P: Fp12Parameters> AddAssign<&'_ Self> for Fp12<P> {
     #[inline]
     fn add_assign(&mut self, other: &Self) {
         self.c0.add_assign(other.c0);
@@ -397,7 +398,7 @@ impl<'a, P: Fp12Parameters> AddAssign<&'a Self> for Fp12<P> {
     }
 }
 
-impl<'a, P: Fp12Parameters> SubAssign<&'a Self> for Fp12<P> {
+impl<P: Fp12Parameters> SubAssign<&'_ Self> for Fp12<P> {
     #[inline]
     fn sub_assign(&mut self, other: &Self) {
         self.c0.sub_assign(&other.c0);
@@ -405,7 +406,7 @@ impl<'a, P: Fp12Parameters> SubAssign<&'a Self> for Fp12<P> {
     }
 }
 
-impl<'a, P: Fp12Parameters> MulAssign<&'a Self> for Fp12<P> {
+impl<P: Fp12Parameters> MulAssign<&'_ Self> for Fp12<P> {
     #[inline]
     #[allow(clippy::suspicious_op_assign_impl)]
     fn mul_assign(&mut self, other: &Self) {
@@ -416,7 +417,7 @@ impl<'a, P: Fp12Parameters> MulAssign<&'a Self> for Fp12<P> {
     }
 }
 
-impl<'a, P: Fp12Parameters> DivAssign<&'a Self> for Fp12<P> {
+impl<P: Fp12Parameters> DivAssign<&'_ Self> for Fp12<P> {
     #[inline]
     fn div_assign(&mut self, other: &Self) {
         self.mul_assign(&other.inverse().unwrap());

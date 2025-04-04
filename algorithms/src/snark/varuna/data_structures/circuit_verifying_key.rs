@@ -1,9 +1,10 @@
-// Copyright (C) 2019-2023 Aleo Systems Inc.
+// Copyright 2024 Aleo Network Foundation
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at:
+
 // http://www.apache.org/licenses/LICENSE-2.0
 
 // Unless required by applicable law or agreed to in writing, software
@@ -15,25 +16,26 @@
 use crate::{polycommit::sonic_pc, snark::varuna::ahp::indexer::*};
 use snarkvm_curves::PairingEngine;
 use snarkvm_utilities::{
-    error,
-    io::{self, Read, Write},
-    serialize::*,
-    string::String,
     FromBytes,
     FromBytesDeserializer,
     ToBytes,
     ToBytesSerializer,
+    error,
+    io::{self, Read, Write},
+    serialize::*,
+    string::String,
 };
 
 use anyhow::Result;
 use core::{fmt, str::FromStr};
-use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 use std::cmp::Ordering;
 
 /// Verification key for a specific index (i.e., R1CS matrices).
 #[derive(Debug, Clone, PartialEq, Eq, CanonicalSerialize, CanonicalDeserialize)]
 pub struct CircuitVerifyingKey<E: PairingEngine> {
-    /// Stores information about the size of the circuit, as well as its defined field.
+    /// Stores information about the size of the circuit, as well as its defined
+    /// field.
     pub circuit_info: CircuitInfo,
     /// Commitments to the indexed polynomials.
     pub circuit_commitments: Vec<sonic_pc::Commitment<E>>,

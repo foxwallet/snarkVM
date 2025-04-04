@@ -1,9 +1,10 @@
-// Copyright (C) 2019-2023 Aleo Systems Inc.
+// Copyright 2024 Aleo Network Foundation
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at:
+
 // http://www.apache.org/licenses/LICENSE-2.0
 
 // Unless required by applicable law or agreed to in writing, software
@@ -26,7 +27,6 @@ mod string;
 use console::{
     network::prelude::*,
     program::{
-        compute_function_id,
         Ciphertext,
         Identifier,
         InputID,
@@ -36,12 +36,13 @@ use console::{
         Register,
         Request,
         Response,
+        TRANSITION_DEPTH,
         TransitionLeaf,
         TransitionPath,
         TransitionTree,
         Value,
         ValueType,
-        TRANSITION_DEPTH,
+        compute_function_id,
     },
     types::{Field, Group},
 };
@@ -494,7 +495,7 @@ pub mod test_helpers {
 
     /// Samples a random transition.
     pub(crate) fn sample_transition(rng: &mut TestRng) -> Transition<CurrentNetwork> {
-        if let Transaction::Execute(_, execution, _) =
+        if let Transaction::Execute(_, _, execution, _) =
             crate::transaction::test_helpers::sample_execution_transaction_with_fee(true, rng)
         {
             execution.into_transitions().next().unwrap()

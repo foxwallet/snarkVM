@@ -1,9 +1,10 @@
-// Copyright (C) 2019-2023 Aleo Systems Inc.
+// Copyright 2024 Aleo Network Foundation
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at:
+
 // http://www.apache.org/licenses/LICENSE-2.0
 
 // Unless required by applicable law or agreed to in writing, software
@@ -44,14 +45,16 @@ pub struct BatchCertificate<N: Network> {
 
 impl<N: Network> BatchCertificate<N> {
     /// The maximum number of signatures in a batch certificate.
-    pub const MAX_SIGNATURES: u16 = BatchHeader::<N>::MAX_CERTIFICATES;
+    pub fn max_signatures() -> Result<u16> {
+        N::LATEST_MAX_CERTIFICATES()
+    }
 }
 
 impl<N: Network> BatchCertificate<N> {
     /// Initializes a new batch certificate.
     pub fn from(batch_header: BatchHeader<N>, signatures: IndexSet<Signature<N>>) -> Result<Self> {
         // Ensure that the number of signatures is within bounds.
-        ensure!(signatures.len() <= Self::MAX_SIGNATURES as usize, "Invalid number of signatures");
+        ensure!(signatures.len() <= Self::max_signatures()? as usize, "Invalid number of signatures");
 
         // Ensure that the signature is from a unique signer and not from the author.
         let signature_authors = signatures.iter().map(|signature| signature.to_address()).collect::<HashSet<_>>();
@@ -234,17 +237,5 @@ pub mod test_helpers {
         );
 
         (certificate, previous_certificates)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    type CurrentNetwork = console::network::MainnetV0;
-
-    #[test]
-    fn test_maximum_signatures() {
-        assert_eq!(BatchHeader::<CurrentNetwork>::MAX_CERTIFICATES, BatchCertificate::<CurrentNetwork>::MAX_SIGNATURES);
     }
 }

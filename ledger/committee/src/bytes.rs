@@ -1,9 +1,10 @@
-// Copyright (C) 2019-2023 Aleo Systems Inc.
+// Copyright 2024 Aleo Network Foundation
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at:
+
 // http://www.apache.org/licenses/LICENSE-2.0
 
 // Unless required by applicable law or agreed to in writing, software
@@ -31,10 +32,10 @@ impl<N: Network> FromBytes for Committee<N> {
         // Read the number of members.
         let num_members = u16::read_le(&mut reader)?;
         // Ensure the number of members is within the allowed limit.
-        if num_members > Self::MAX_COMMITTEE_SIZE {
+        if num_members > Self::max_committee_size().map_err(error)? {
             return Err(error(format!(
                 "Committee cannot exceed {} members, found {num_members}",
-                Self::MAX_COMMITTEE_SIZE,
+                Self::max_committee_size().map_err(error)?,
             )));
         }
 

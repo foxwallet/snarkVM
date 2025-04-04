@@ -1,9 +1,10 @@
-// Copyright (C) 2019-2023 Aleo Systems Inc.
+// Copyright 2024 Aleo Network Foundation
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at:
+
 // http://www.apache.org/licenses/LICENSE-2.0
 
 // Unless required by applicable law or agreed to in writing, software
@@ -69,7 +70,7 @@ impl<N: Network> Execution<N> {
 
     /// Returns the execution ID.
     pub fn to_execution_id(&self) -> Result<Field<N>> {
-        Ok(*Transaction::execution_tree(self, &None)?.root())
+        Ok(*Transaction::execution_tree(self)?.root())
     }
 }
 
@@ -156,6 +157,6 @@ pub mod test_helpers {
         // Retrieve a transaction.
         let transaction = block.transactions().iter().next().unwrap().deref().clone();
         // Retrieve the execution.
-        if let Transaction::Execute(_, execution, _) = transaction { execution } else { unreachable!() }
+        if let Transaction::Execute(_, _, execution, _) = transaction { *execution } else { unreachable!() }
     }
 }

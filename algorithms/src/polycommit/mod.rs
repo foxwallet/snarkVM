@@ -1,9 +1,10 @@
-// Copyright (C) 2019-2023 Aleo Systems Inc.
+// Copyright 2024 Aleo Network Foundation
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at:
+
 // http://www.apache.org/licenses/LICENSE-2.0
 
 // Unless required by applicable law or agreed to in writing, software
@@ -25,8 +26,9 @@ pub mod kzg10;
 
 /// Polynomial commitment scheme based on the construction in [\[KZG10\]][kzg],
 /// modified to obtain batching and to enforce strict
-/// degree bounds by following the approach outlined in [[MBKM19, “Sonic”]][sonic]
-/// (more precisely, via the variant in [[Gabizon19, “AuroraLight”]][al] that avoids negative G1 powers).
+/// degree bounds by following the approach outlined in [[MBKM19,
+/// “Sonic”]][sonic] (more precisely, via the variant in [[Gabizon19,
+/// “AuroraLight”]][al] that avoids negative G1 powers).
 ///
 /// [kzg]: http://cacr.uwaterloo.ca/techreports/2010/cacr2010-10.pdf
 /// [sonic]: https://eprint.iacr.org/2019/099

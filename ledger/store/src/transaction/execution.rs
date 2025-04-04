@@ -1,9 +1,10 @@
-// Copyright (C) 2019-2023 Aleo Systems Inc.
+// Copyright 2024 Aleo Network Foundation
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at:
+
 // http://www.apache.org/licenses/LICENSE-2.0
 
 // Unless required by applicable law or agreed to in writing, software
@@ -13,13 +14,13 @@
 // limitations under the License.
 
 use crate::{
+    FeeStorage,
+    FeeStore,
+    TransitionStore,
     atomic_batch_scope,
     cow_to_cloned,
     cow_to_copied,
     helpers::{Map, MapRead},
-    FeeStorage,
-    FeeStore,
-    TransitionStore,
 };
 use console::network::prelude::*;
 use ledger_block::{Execution, Transaction, Transition};
@@ -123,7 +124,7 @@ pub trait ExecutionStorage<N: Network>: Clone + Send + Sync {
         // Ensure the transaction is a execution.
         let (transaction_id, execution, fee) = match transaction {
             Transaction::Deploy(..) => bail!("Attempted to insert a deploy transaction into execution storage."),
-            Transaction::Execute(transaction_id, execution, fee) => (transaction_id, execution, fee),
+            Transaction::Execute(transaction_id, _, execution, fee) => (transaction_id, execution, fee),
             Transaction::Fee(..) => bail!("Attempted to insert a fee transaction into execution storage."),
         };
 
@@ -392,7 +393,7 @@ impl<N: Network, E: ExecutionStorage<N>> ExecutionStore<N, E> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{helpers::memory::ExecutionMemory, TransitionStore};
+    use crate::{TransitionStore, helpers::memory::ExecutionMemory};
 
     type CurrentNetwork = console::network::MainnetV0;
 

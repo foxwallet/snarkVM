@@ -1,9 +1,10 @@
-// Copyright (C) 2019-2023 Aleo Systems Inc.
+// Copyright 2024 Aleo Network Foundation
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at:
+
 // http://www.apache.org/licenses/LICENSE-2.0
 
 // Unless required by applicable law or agreed to in writing, software
@@ -15,22 +16,22 @@
 use std::collections::BTreeMap;
 
 use crate::{
-    fft::{polynomial::PolyMultiplier, DensePolynomial, EvaluationDomain, Evaluations as EvaluationsOnDomain},
+    fft::{DensePolynomial, EvaluationDomain, Evaluations as EvaluationsOnDomain, polynomial::PolyMultiplier},
     polycommit::sonic_pc::{LabeledPolynomial, PolynomialInfo, PolynomialLabel},
     snark::varuna::{
-        ahp::{verifier, AHPForR1CS},
-        prover,
-        selectors::apply_randomized_selector,
-        witness_label,
         Circuit,
         CircuitId,
         SNARKMode,
+        ahp::{AHPForR1CS, verifier},
+        prover,
+        selectors::apply_randomized_selector,
+        witness_label,
     },
 };
 use anyhow::Result;
 use rand_core::RngCore;
 use snarkvm_fields::PrimeField;
-use snarkvm_utilities::{cfg_into_iter, cfg_iter_mut, cfg_reduce, ExecutionPool};
+use snarkvm_utilities::{ExecutionPool, cfg_into_iter, cfg_iter_mut, cfg_reduce};
 
 #[cfg(not(feature = "serial"))]
 use rayon::prelude::*;
@@ -58,9 +59,9 @@ impl<F: PrimeField, SM: SNARKMode> AHPForR1CS<F, SM> {
 
         let max_constraint_domain = state.max_constraint_domain;
 
-        let verifier::FirstMessage { batch_combiners, .. } = verifier_message;
+        let verifier::FirstMessage { first_round_batch_combiners, .. } = verifier_message;
 
-        let h_0 = Self::calculate_rowcheck_witness(&mut state, batch_combiners)?;
+        let h_0 = Self::calculate_rowcheck_witness(&mut state, first_round_batch_combiners)?;
 
         assert!(h_0.degree() <= 2 * max_constraint_domain.size() + 2 * zk_bound.unwrap_or(0) - 2);
 

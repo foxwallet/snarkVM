@@ -1,9 +1,10 @@
-// Copyright (C) 2019-2023 Aleo Systems Inc.
+// Copyright 2024 Aleo Network Foundation
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at:
+
 // http://www.apache.org/licenses/LICENSE-2.0
 
 // Unless required by applicable law or agreed to in writing, software
@@ -60,8 +61,11 @@ pub struct Committee<N: Network> {
 impl<N: Network> Committee<N> {
     /// The committee lookback range.
     pub const COMMITTEE_LOOKBACK_RANGE: u64 = BatchHeader::<N>::MAX_GC_ROUNDS as u64;
+
     /// The maximum number of members that may be in a committee.
-    pub const MAX_COMMITTEE_SIZE: u16 = BatchHeader::<N>::MAX_CERTIFICATES;
+    pub fn max_committee_size() -> Result<u16> {
+        N::LATEST_MAX_CERTIFICATES()
+    }
 
     /// Initializes a new `Committee` instance.
     pub fn new_genesis(members: IndexMap<Address<N>, (u64, bool, u8)>) -> Result<Self> {
@@ -75,9 +79,9 @@ impl<N: Network> Committee<N> {
         ensure!(members.len() >= 3, "Committee must have at least 3 members");
         // Ensure there are no more than the maximum number of members.
         ensure!(
-            members.len() <= Self::MAX_COMMITTEE_SIZE as usize,
+            members.len() <= Self::max_committee_size()? as usize,
             "Committee must have no more than {} members",
-            Self::MAX_COMMITTEE_SIZE
+            Self::max_committee_size()?
         );
         // Ensure all members have the minimum required stake.
         ensure!(
@@ -169,14 +173,15 @@ impl<N: Network> Committee<N> {
         self.total_stake().saturating_add(2).saturating_div(3)
     }
 
-    /// Returns the amount of stake required to reach a quorum threshold `(2f + 1)`.
+    /// Returns the amount of stake required to reach a quorum threshold `(N - f)`.
     pub fn quorum_threshold(&self) -> u64 {
         // Assuming `N = 3f + 1 + k`, where `0 <= k < 3`,
-        // then `(2N + 3) / 3 = 2f + 1 + (2k + 2)/3 = 2f + 1 + k = N - f`.
+        // then `2N/3 + 1 = 2f + 1 + (2k + 2)/3 = 2f + 1 + k = N - f`.
+        // In the line above, `/` means integer division.
         self.total_stake().saturating_mul(2).saturating_div(3).saturating_add(1)
     }
 
-    /// Returns the total amount of stake in the committee `(3f + 1)`.
+    /// Returns the total amount of stake in the committee.
     pub const fn total_stake(&self) -> u64 {
         self.total_stake
     }
@@ -434,7 +439,7 @@ mod tests {
         // Set the number of rounds.
         const NUM_ROUNDS: u64 = 256 * 2_000;
         // Sample the number of members.
-        let num_members = rng.gen_range(3..=Committee::<CurrentNetwork>::MAX_COMMITTEE_SIZE);
+        let num_members = rng.gen_range(3..=Committee::<CurrentNetwork>::max_committee_size().unwrap());
         // Sample a committee.
         let committee = crate::test_helpers::sample_committee_custom(num_members, rng);
         // Check the leader distribution.
@@ -446,8 +451,10 @@ mod tests {
         // Initialize the RNG.
         let rng = &mut TestRng::default();
         // Sample a committee.
-        let committee =
-            crate::test_helpers::sample_committee_custom(Committee::<CurrentNetwork>::MAX_COMMITTEE_SIZE, rng);
+        let committee = crate::test_helpers::sample_committee_custom(
+            Committee::<CurrentNetwork>::max_committee_size().unwrap(),
+            rng,
+        );
 
         // Start a timer.
         let timer = std::time::Instant::now();
@@ -460,10 +467,5 @@ mod tests {
             let (address2, (_, _, _)) = sorted_members[i + 1];
             assert!(address1.to_x_coordinate() > address2.to_x_coordinate());
         }
-    }
-
-    #[test]
-    fn test_maximum_committee_size() {
-        assert_eq!(Committee::<CurrentNetwork>::MAX_COMMITTEE_SIZE, BatchHeader::<CurrentNetwork>::MAX_CERTIFICATES);
     }
 }

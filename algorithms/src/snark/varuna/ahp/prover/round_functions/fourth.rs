@@ -1,9 +1,10 @@
-// Copyright (C) 2019-2023 Aleo Systems Inc.
+// Copyright 2024 Aleo Network Foundation
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at:
+
 // http://www.apache.org/licenses/LICENSE-2.0
 
 // Unless required by applicable law or agreed to in writing, software
@@ -14,24 +15,24 @@
 
 use crate::{
     fft::{
-        domain::{FFTPrecomputation, IFFTPrecomputation},
-        polynomial::PolyMultiplier,
         DensePolynomial,
         EvaluationDomain,
         Evaluations as EvaluationsOnDomain,
+        domain::{FFTPrecomputation, IFFTPrecomputation},
+        polynomial::PolyMultiplier,
     },
     polycommit::sonic_pc::{LabeledPolynomial, PolynomialInfo, PolynomialLabel},
     snark::varuna::{
-        ahp::{indexer::CircuitInfo, verifier, AHPError, AHPForR1CS, CircuitId},
+        SNARKMode,
+        ahp::{AHPError, AHPForR1CS, CircuitId, indexer::CircuitInfo, verifier},
         matrices::MatrixEvals,
         prover,
         selectors::apply_randomized_selector,
         witness_label,
-        SNARKMode,
     },
 };
-use snarkvm_fields::{batch_inversion_and_mul, PrimeField};
-use snarkvm_utilities::{cfg_iter, cfg_iter_mut, ExecutionPool};
+use snarkvm_fields::{PrimeField, batch_inversion_and_mul};
+use snarkvm_utilities::{ExecutionPool, cfg_iter, cfg_iter_mut};
 
 use anyhow::Result;
 use core::convert::TryInto;
@@ -213,7 +214,8 @@ impl<F: PrimeField, SM: SNARKMode> AHPForR1CS<F, SM> {
         end_timer!(f_evals_time);
 
         let f_poly_time = start_timer!(|| format!("Computing f poly for {label}"));
-        // we define f as the rational equation for which we're running the sumcheck protocol
+        // we define f as the rational equation for which we're running the sumcheck
+        // protocol
         let f = EvaluationsOnDomain::from_vec_and_domain(f_evals_on_K, non_zero_domain)
             .interpolate_with_pc(ifft_precomputation);
 

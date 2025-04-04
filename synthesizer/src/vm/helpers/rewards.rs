@@ -1,9 +1,10 @@
-// Copyright (C) 2019-2023 Aleo Systems Inc.
+// Copyright 2024 Aleo Network Foundation
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at:
+
 // http://www.apache.org/licenses/LICENSE-2.0
 
 // Unless required by applicable law or agreed to in writing, software
@@ -36,9 +37,10 @@ const MAX_COINBASE_REWARD: u64 = ledger_block::MAX_COINBASE_REWARD; // Coinbase 
 /// of the total stake will not receive a staking reward. In addition, this method
 /// ensures delegators who have less than 10,000 credits are not eligible for a staking reward.
 ///
-/// The choice of 25% is to ensure at least 4 validators are operational at any given time,
-/// since our security model adheres to 3f+1, where f=1. As such, we tolerate Byzantine behavior
-/// up to 33% of the total stake.
+/// The choice of 25% is to ensure at least 4 validators are operational at any given time.
+/// Our security model tolerates Byzantines behavior by validators staking up to f stake,
+/// where f = max{m: integer | m < N/3}, N being the total amount staked.
+/// Therefore, 1 Byzantine validator out of 4 equal-staked validators will be tolerated.
 pub fn staking_rewards<N: Network>(
     stakers: &IndexMap<Address<N>, (Address<N>, u64)>,
     committee: &Committee<N>,
@@ -338,7 +340,7 @@ mod tests {
         // Sample a random block reward.
         let block_reward = rng.gen_range(0..MAX_COINBASE_REWARD);
         // Sample a committee.
-        let committee = ledger_committee::test_helpers::sample_committee_for_round_and_size(1, 100, rng);
+        let committee = ledger_committee::test_helpers::sample_committee_for_round_and_size(1, 25, rng);
         // Convert the committee into stakers.
         let stakers = crate::committee::test_helpers::to_stakers(committee.members(), rng);
 
