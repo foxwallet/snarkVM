@@ -1,4 +1,4 @@
-// Copyright 2024 Aleo Network Foundation
+// Copyright (c) 2019-2025 Provable Inc.
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -48,49 +48,58 @@ mod parse;
 mod serialize;
 
 use console::{
-    network::prelude::{
-        Debug,
-        Deserialize,
-        Deserializer,
-        Display,
-        Err,
-        Error,
-        ErrorKind,
-        Formatter,
-        FromBytes,
-        FromBytesDeserializer,
-        FromStr,
-        IoResult,
-        Network,
-        Parser,
-        ParserResult,
-        Read,
-        Result,
-        Sanitizer,
-        Serialize,
-        Serializer,
-        ToBytes,
-        ToBytesSerializer,
-        TypeName,
-        Write,
-        anyhow,
-        bail,
-        de,
-        ensure,
-        error,
-        fmt,
-        make_error,
-        many0,
-        many1,
-        map,
-        map_res,
-        tag,
-        take,
+    network::{
+        ConsensusVersion,
+        prelude::{
+            Debug,
+            Deserialize,
+            Deserializer,
+            Display,
+            Err,
+            Error,
+            ErrorKind,
+            Formatter,
+            FromBytes,
+            FromBytesDeserializer,
+            FromStr,
+            IoResult,
+            Network,
+            Parser,
+            ParserResult,
+            Read,
+            Result,
+            Sanitizer,
+            Serialize,
+            Serializer,
+            ToBytes,
+            ToBytesSerializer,
+            TypeName,
+            Write,
+            anyhow,
+            bail,
+            de,
+            ensure,
+            error,
+            fmt,
+            make_error,
+            many0,
+            many1,
+            map,
+            map_res,
+            tag,
+            take,
+        },
     },
     program::{Identifier, PlaintextType, ProgramID, RecordType, StructType},
 };
+use snarkvm_utilities::cfg_iter;
 
-use indexmap::IndexMap;
+use console::prelude::Itertools;
+use indexmap::{IndexMap, IndexSet};
+use std::collections::BTreeSet;
+
+#[cfg(not(feature = "serial"))]
+use rayon::prelude::*;
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 enum ProgramDefinition {
@@ -106,14 +115,14 @@ enum ProgramDefinition {
     Function,
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone)]
 pub struct ProgramCore<N: Network, Instruction: InstructionTrait<N>, Command: CommandTrait<N>> {
     /// The ID of the program.
     id: ProgramID<N>,
     /// A map of the declared imports for the program.
     imports: IndexMap<ProgramID<N>, Import<N>>,
     /// A map of identifiers to their program declaration.
-    identifiers: IndexMap<Identifier<N>, ProgramDefinition>,
+    components: IndexMap<Identifier<N>, ProgramDefinition>,
     /// A map of the declared mappings for the program.
     mappings: IndexMap<Identifier<N>, Mapping<N>>,
     /// A map of the declared structs for the program.
@@ -126,6 +135,38 @@ pub struct ProgramCore<N: Network, Instruction: InstructionTrait<N>, Command: Co
     functions: IndexMap<Identifier<N>, FunctionCore<N, Instruction, Command>>,
 }
 
+impl<N: Network, Instruction: InstructionTrait<N>, Command: CommandTrait<N>> PartialEq
+    for ProgramCore<N, Instruction, Command>
+{
+    /// Compares two programs for equality, verifying that the components are in the same order.
+    /// The order of the components must match to ensure that deployment tree is well-formed.
+    fn eq(&self, other: &Self) -> bool {
+        // Check that the number of components is the same.
+        if self.components.len() != other.components.len() {
+            return false;
+        }
+        // Check that the components match in order.
+        for (left, right) in self.components.iter().zip_eq(other.components.iter()) {
+            if left != right {
+                return false;
+            }
+        }
+        // Check that the remaining fields match.
+        self.id == other.id
+            && self.imports == other.imports
+            && self.mappings == other.mappings
+            && self.structs == other.structs
+            && self.records == other.records
+            && self.closures == other.closures
+            && self.functions == other.functions
+    }
+}
+
+impl<N: Network, Instruction: InstructionTrait<N>, Command: CommandTrait<N>> Eq
+    for ProgramCore<N, Instruction, Command>
+{
+}
+
 impl<N: Network, Instruction: InstructionTrait<N>, Command: CommandTrait<N>> ProgramCore<N, Instruction, Command> {
     /// Initializes an empty program.
     #[inline]
@@ -136,7 +177,7 @@ impl<N: Network, Instruction: InstructionTrait<N>, Command: CommandTrait<N>> Pro
         Ok(Self {
             id,
             imports: IndexMap::new(),
-            identifiers: IndexMap::new(),
+            components: IndexMap::new(),
             mappings: IndexMap::new(),
             structs: IndexMap::new(),
             records: IndexMap::new(),
@@ -343,7 +384,7 @@ impl<N: Network, Instruction: InstructionTrait<N>, Command: CommandTrait<N>> Pro
         ensure!(!Self::is_reserved_opcode(&mapping_name.to_string()), "'{mapping_name}' is a reserved opcode.");
 
         // Add the mapping name to the identifiers.
-        if self.identifiers.insert(mapping_name, ProgramDefinition::Mapping).is_some() {
+        if self.components.insert(mapping_name, ProgramDefinition::Mapping).is_some() {
             bail!("'{mapping_name}' already exists in the program.")
         }
         // Add the mapping to the program.
@@ -404,7 +445,7 @@ impl<N: Network, Instruction: InstructionTrait<N>, Command: CommandTrait<N>> Pro
         }
 
         // Add the struct name to the identifiers.
-        if self.identifiers.insert(struct_name, ProgramDefinition::Struct).is_some() {
+        if self.components.insert(struct_name, ProgramDefinition::Struct).is_some() {
             bail!("'{}' already exists in the program.", struct_name)
         }
         // Add the struct to the program.
@@ -461,7 +502,7 @@ impl<N: Network, Instruction: InstructionTrait<N>, Command: CommandTrait<N>> Pro
         }
 
         // Add the record name to the identifiers.
-        if self.identifiers.insert(record_name, ProgramDefinition::Record).is_some() {
+        if self.components.insert(record_name, ProgramDefinition::Record).is_some() {
             bail!("'{record_name}' already exists in the program.")
         }
         // Add the record to the program.
@@ -509,7 +550,7 @@ impl<N: Network, Instruction: InstructionTrait<N>, Command: CommandTrait<N>> Pro
         ensure!(closure.outputs().len() <= N::MAX_OUTPUTS, "Closure exceeds maximum number of outputs");
 
         // Add the function name to the identifiers.
-        if self.identifiers.insert(closure_name, ProgramDefinition::Closure).is_some() {
+        if self.components.insert(closure_name, ProgramDefinition::Closure).is_some() {
             bail!("'{closure_name}' already exists in the program.")
         }
         // Add the closure to the program.
@@ -555,7 +596,7 @@ impl<N: Network, Instruction: InstructionTrait<N>, Command: CommandTrait<N>> Pro
         ensure!(function.outputs().len() <= N::MAX_OUTPUTS, "Function exceeds maximum number of outputs");
 
         // Add the function name to the identifiers.
-        if self.identifiers.insert(function_name, ProgramDefinition::Function).is_some() {
+        if self.components.insert(function_name, ProgramDefinition::Function).is_some() {
             bail!("'{function_name}' already exists in the program.")
         }
         // Add the function to the program.
@@ -567,8 +608,11 @@ impl<N: Network, Instruction: InstructionTrait<N>, Command: CommandTrait<N>> Pro
 }
 
 impl<N: Network, Instruction: InstructionTrait<N>, Command: CommandTrait<N>> ProgramCore<N, Instruction, Command> {
+    /// A list of reserved keywords for Aleo programs, enforced at the parser level.
+    // New keywords should be enforced through `RESTRICTED_KEYWORDS` instead, if possible.
+    // Adding keywords to this list will require a backwards-compatible versioning for programs.
     #[rustfmt::skip]
-    const KEYWORDS: &'static [&'static str] = &[
+    pub const KEYWORDS: &'static [&'static str] = &[
         // Mode
         "const",
         "constant",
@@ -642,10 +686,18 @@ impl<N: Network, Instruction: InstructionTrait<N>, Command: CommandTrait<N>> Pro
         "type",
         "future",
     ];
+    /// A list of restricted keywords for Aleo programs, enforced at the VM-level for program hygiene.
+    /// Each entry is a tuple of the consensus version and a list of keywords.
+    /// If the current consensus version is greater than or equal to the specified version,
+    /// the keywords in the list should be restricted.
+    #[rustfmt::skip]
+    pub const RESTRICTED_KEYWORDS: &'static [(ConsensusVersion, &'static [&'static str])] = &[
+        (ConsensusVersion::V6, &["constructor"])
+    ];
 
     /// Returns `true` if the given name does not already exist in the program.
     fn is_unique_name(&self, name: &Identifier<N>) -> bool {
-        !self.identifiers.contains_key(name)
+        !self.components.contains_key(name)
     }
 
     /// Returns `true` if the given name is a reserved opcode.
@@ -659,6 +711,129 @@ impl<N: Network, Instruction: InstructionTrait<N>, Command: CommandTrait<N>> Pro
         let name = name.to_string();
         // Check if the name is a keyword.
         Self::KEYWORDS.iter().any(|keyword| *keyword == name)
+    }
+
+    /// Returns an iterator over the restricted keywords for the given consensus version.
+    pub fn restricted_keywords_for_consensus_version(
+        consensus_version: ConsensusVersion,
+    ) -> impl Iterator<Item = &'static str> {
+        Self::RESTRICTED_KEYWORDS
+            .iter()
+            .filter(move |(version, _)| *version <= consensus_version)
+            .flat_map(|(_, keywords)| *keywords)
+            .copied()
+    }
+
+    /// Checks a program for restricted keywords for the given consensus version.
+    /// Returns an error if any restricted keywords are found.
+    /// Note: Restrictions are not enforced on the import names in case they were deployed before the restrictions were added.
+    pub fn check_restricted_keywords_for_consensus_version(&self, consensus_version: ConsensusVersion) -> Result<()> {
+        // Get all keywords that are restricted for the consensus version.
+        let keywords =
+            Program::<N>::restricted_keywords_for_consensus_version(consensus_version).collect::<IndexSet<_>>();
+        // Check if the program name is a restricted keywords.
+        let program_name = self.id().name().to_string();
+        if keywords.contains(&program_name.as_str()) {
+            bail!("Program name '{program_name}' is a restricted keyword for the current consensus version")
+        }
+        // Check that all top-level program components are not restricted keywords.
+        for identifier in self.components.keys() {
+            if keywords.contains(identifier.to_string().as_str()) {
+                bail!("Program component '{identifier}' is a restricted keyword for the current consensus version")
+            }
+        }
+        // Check that all record entry names are not restricted keywords.
+        for record_type in self.records().values() {
+            for entry_name in record_type.entries().keys() {
+                if keywords.contains(entry_name.to_string().as_str()) {
+                    bail!("Record entry '{entry_name}' is a restricted keyword for the current consensus version")
+                }
+            }
+        }
+        // Check that all struct member names are not restricted keywords.
+        for struct_type in self.structs().values() {
+            for member_name in struct_type.members().keys() {
+                if keywords.contains(member_name.to_string().as_str()) {
+                    bail!("Struct member '{member_name}' is a restricted keyword for the current consensus version")
+                }
+            }
+        }
+        // Check that all `finalize` positions.
+        // Note: It is sufficient to only check the positions in `FinalizeCore` since `FinalizeTypes::initialize` checks that every
+        // `Branch` instruction targets a valid position.
+        for function in self.functions().values() {
+            if let Some(finalize_logic) = function.finalize_logic() {
+                for position in finalize_logic.positions().keys() {
+                    if keywords.contains(position.to_string().as_str()) {
+                        bail!(
+                            "Finalize position '{position}' is a restricted keyword for the current consensus version"
+                        )
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+impl<N: Network, Instruction: InstructionTrait<N>, Command: CommandTrait<N>> ProgramCore<N, Instruction, Command> {
+    /// Checks that the program structure is well-formed under the following rules:
+    ///  1. The program ID must not contain the keyword "aleo" in the program name.
+    ///  2. The record name must not contain the keyword "aleo".
+    ///  3. Record names must not be prefixes of other record names.
+    ///  4. Record entry names must not contain the keyword "aleo".
+    pub fn check_program_naming_structure(&self) -> Result<()> {
+        // 1. Check if the program ID contains the "aleo" substring
+        let program_id = self.id().name().to_string();
+        if program_id.contains("aleo") {
+            bail!("Program ID '{program_id}' can't contain the reserved keyword 'aleo'.");
+        }
+
+        // Fetch the record names in a sorted BTreeSet.
+        let record_names: BTreeSet<String> = self.records.keys().map(|name| name.to_string()).collect();
+
+        // 2. Check if any record name contains the "aleo" substring.
+        for record_name in &record_names {
+            if record_name.contains("aleo") {
+                bail!("Record name '{record_name}' can't contain the reserved keyword 'aleo'.");
+            }
+        }
+
+        // 3. Check if any of the record names are a prefix of another.
+        let mut record_names_iter = record_names.iter();
+        let mut previous_record_name = record_names_iter.next();
+        for record_name in record_names_iter {
+            if let Some(previous) = previous_record_name {
+                if record_name.starts_with(previous) {
+                    bail!("Record name '{previous}' can't be a prefix of record name '{record_name}'.");
+                }
+            }
+            previous_record_name = Some(record_name);
+        }
+
+        // 4. Check if any record entry names contain the "aleo" substring.
+        for record_entry_name in self.records.values().flat_map(|record_type| record_type.entries().keys()) {
+            if record_entry_name.to_string().contains("aleo") {
+                bail!("Record entry name '{record_entry_name}' can't contain the reserved keyword 'aleo'.");
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Checks that the program does not make external calls to `credits.aleo/upgrade`.
+    pub fn check_external_calls_to_credits_upgrade(&self) -> Result<()> {
+        // Check if the program makes external calls to `credits.aleo/upgrade`.
+        cfg_iter!(self.functions()).flat_map(|(_, function)| function.instructions()).try_for_each(|instruction| {
+            if let Some(CallOperator::Locator(locator)) = instruction.call_operator() {
+                // Check if the locator is restricted.
+                if locator.to_string() == "credits.aleo/upgrade" {
+                    bail!("External call to restricted locator '{}'", locator)
+                }
+            }
+            Ok(())
+        })?;
+        Ok(())
     }
 }
 

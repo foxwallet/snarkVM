@@ -1,4 +1,4 @@
-// Copyright 2024 Aleo Network Foundation
+// Copyright (c) 2019-2025 Provable Inc.
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -67,6 +67,11 @@ impl ProgramTest {
     /// Returns the additional keys for the test.
     pub fn keys(&self) -> &[PrivateKey<CurrentNetwork>] {
         &self.keys
+    }
+
+    /// Returns the path to the expectation file.
+    pub fn path(&self) -> &PathBuf {
+        &self.path
     }
 }
 

@@ -1,4 +1,4 @@
-// Copyright 2024 Aleo Network Foundation
+// Copyright (c) 2019-2025 Provable Inc.
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,5 +20,11 @@ impl<N: Network, A: circuit::Aleo<Network = N>> RegistersCall<N> for Registers<N
     #[inline]
     fn call_stack(&self) -> CallStack<N> {
         self.call_stack.clone()
+    }
+
+    /// Returns a reference to the current call stack.
+    #[inline]
+    fn call_stack_ref(&self) -> &CallStack<N> {
+        &self.call_stack
     }
 }

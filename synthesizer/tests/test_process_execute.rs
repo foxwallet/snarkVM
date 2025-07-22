@@ -1,4 +1,4 @@
-// Copyright 2024 Aleo Network Foundation
+// Copyright (c) 2019-2025 Provable Inc.
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -39,8 +39,12 @@ fn test_process_execute() {
         // Run the test.
         let output = run_test(process.clone(), test);
         // Check against the expected output.
-        test.check(&output).unwrap();
-        // Save the output.
+        let res = test.check(&output);
+        if let Err(err) = &res {
+            println!("Error running test {:?}: {}", test.path(), err);
+        }
+        res.unwrap();
+        // Save the output when valid.
         test.save(&output).unwrap();
     });
 }

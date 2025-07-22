@@ -1,4 +1,4 @@
-// Copyright 2024 Aleo Network Foundation
+// Copyright (c) 2019-2025 Provable Inc.
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -208,18 +208,17 @@ pub enum Instruction<N: Network> {
 ///
 /// ## Example
 /// This example will print the opcode and the instruction to the given stream.
-/// ```ignore
+/// ```rust,ignore
 /// instruction!(self, |instruction| write!(f, "{} {};", self.opcode(), instruction))
 /// ```
 /// The above example is equivalent to the following logic:
-/// ```ignore
+/// ```rust,ignore
 ///     match self {
 ///         Self::Add(instruction) => write!(f, "{} {};", self.opcode(), instruction),
 ///         Self::Sub(instruction) => write!(f, "{} {};", self.opcode(), instruction),
 ///         Self::Mul(instruction) => write!(f, "{} {};", self.opcode(), instruction),
 ///         Self::Div(instruction) => write!(f, "{} {};", self.opcode(), instruction),
 ///     }
-/// )
 /// ```
 #[macro_export]
 macro_rules! instruction {
@@ -385,6 +384,15 @@ impl<N: Network> InstructionTrait<N> for Instruction<N> {
     fn is_reserved_opcode(name: &str) -> bool {
         // Check if the given name matches any opcode (in its entirety; including past the first '.' if it exists).
         Instruction::<N>::OPCODES.iter().any(|opcode| **opcode == name)
+    }
+
+    /// Returns the `CallOperator` if the instruction is a `call` instruction, otherwise `None`.
+    #[inline]
+    fn call_operator(&self) -> Option<&CallOperator<N>> {
+        match self {
+            Self::Call(call) => Some(call.operator()),
+            _ => None,
+        }
     }
 }
 

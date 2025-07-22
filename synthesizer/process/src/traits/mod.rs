@@ -1,4 +1,4 @@
-// Copyright 2024 Aleo Network Foundation
+// Copyright (c) 2019-2025 Provable Inc.
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,10 +41,12 @@ pub trait StackEvaluate<N: Network>: Clone {
     ///
     /// # Errors
     /// This method will halt if the given inputs are not the same length as the input statements.
-    fn evaluate_function<A: circuit::Aleo<Network = N>>(
+    fn evaluate_function<A: circuit::Aleo<Network = N>, R: CryptoRng + Rng>(
         &self,
         call_stack: CallStack<N>,
         caller: Option<ProgramID<N>>,
+        root_tvk: Option<Field<N>>,
+        rng: &mut R,
     ) -> Result<Response<N>>;
 }
 
@@ -89,4 +91,7 @@ pub trait StackProgramTypes<N: Network> {
 pub trait RegistersCall<N: Network> {
     /// Returns the current call stack.
     fn call_stack(&self) -> CallStack<N>;
+
+    /// Returns a reference to the current call stack.
+    fn call_stack_ref(&self) -> &CallStack<N>;
 }

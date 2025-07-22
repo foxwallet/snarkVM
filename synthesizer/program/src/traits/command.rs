@@ -1,4 +1,4 @@
-// Copyright 2024 Aleo Network Foundation
+// Copyright (c) 2019-2025 Provable Inc.
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,7 +19,7 @@ use console::{
     program::{Identifier, Register},
 };
 
-pub trait CommandTrait<N: Network>: Clone + Parser + FromBytes + ToBytes {
+pub trait CommandTrait<N: Network>: Clone + PartialEq + Eq + Parser + FromBytes + ToBytes + Send + Sync {
     /// Returns the destination registers of the command.
     fn destinations(&self) -> Vec<Register<N>>;
     /// Returns the branch target, if the command is a branch command.
