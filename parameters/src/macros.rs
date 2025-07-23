@@ -353,7 +353,7 @@ macro_rules! impl_mobile_local {
             }
         }
     };
-    ($name: ident, $local_dir: expr, $fname: tt, $ftype: tt) => {
+    ($name: ident, $local_dir: expr, $fname: tt, $ftype: tt, $credits_version: tt) => {
         #[derive(Clone, Debug, PartialEq, Eq)]
         pub struct $name;
 
@@ -366,7 +366,7 @@ macro_rules! impl_mobile_local {
                         "The parameter directory was not set".to_string(),
                     ));
                 }
-                let _filepath = format!("{}{}.{}", dir.unwrap(), $fname, $ftype);
+                let _filepath = format!("{}{}{}{}.{}", dir.unwrap(), $credits_version, "/", $fname, $ftype);
                 println!("==> impl_mobile_local2 _filepath {}", &_filepath);
                 let buffer = std::fs::read(_filepath)
                     .map_err(|_| {
