@@ -16,16 +16,15 @@
 #![forbid(unsafe_code)]
 #![allow(clippy::too_many_arguments)]
 #![warn(clippy::cast_possible_truncation)]
-#![cfg_attr(not(feature = "aleo-cli"), allow(unused_variables))]
+
+extern crate snarkvm_circuit as circuit;
+extern crate snarkvm_console as console;
 
 use console::network::{FiatShamir, prelude::*};
 use snarkvm_algorithms::{snark::varuna, traits::SNARK};
+use snarkvm_utilities::dev_println;
 
-use once_cell::sync::OnceCell;
-use std::sync::Arc;
-
-#[cfg(feature = "aleo-cli")]
-use colored::Colorize;
+use std::sync::{Arc, OnceLock};
 
 type Varuna<N> = varuna::VarunaSNARK<<N as Environment>::PairingCurve, FiatShamir<N>, varuna::VarunaHidingMode>;
 
@@ -54,7 +53,7 @@ pub(crate) mod test_helpers {
     use console::{network::MainnetV0, prelude::One as _};
     use snarkvm_algorithms::snark::varuna::VarunaVersion;
 
-    use once_cell::sync::OnceCell;
+    use std::sync::OnceLock;
 
     type CurrentNetwork = MainnetV0;
 
@@ -84,7 +83,7 @@ pub(crate) mod test_helpers {
 
     /// Returns a sample assignment for the example circuit.
     pub(crate) fn sample_assignment() -> Assignment<<Circuit as Environment>::BaseField> {
-        static INSTANCE: OnceCell<Assignment<<Circuit as Environment>::BaseField>> = OnceCell::new();
+        static INSTANCE: OnceLock<Assignment<<Circuit as Environment>::BaseField>> = OnceLock::new();
         INSTANCE
             .get_or_init(|| {
                 let _candidate_output = create_example_circuit::<Circuit>();
@@ -100,7 +99,7 @@ pub(crate) mod test_helpers {
 
     /// Returns the sample circuit keys for the example circuit.
     pub(crate) fn sample_keys() -> (ProvingKey<CurrentNetwork>, VerifyingKey<CurrentNetwork>) {
-        static INSTANCE: OnceCell<(ProvingKey<CurrentNetwork>, VerifyingKey<CurrentNetwork>)> = OnceCell::new();
+        static INSTANCE: OnceLock<(ProvingKey<CurrentNetwork>, VerifyingKey<CurrentNetwork>)> = OnceLock::new();
         INSTANCE
             .get_or_init(|| {
                 let assignment = sample_assignment();
@@ -113,7 +112,7 @@ pub(crate) mod test_helpers {
 
     /// Returns a sample proof for the example circuit.
     pub(crate) fn sample_proof() -> Proof<CurrentNetwork> {
-        static INSTANCE: OnceCell<Proof<CurrentNetwork>> = OnceCell::new();
+        static INSTANCE: OnceLock<Proof<CurrentNetwork>> = OnceLock::new();
         INSTANCE
             .get_or_init(|| {
                 let assignment = sample_assignment();
@@ -125,7 +124,7 @@ pub(crate) mod test_helpers {
 
     /// Returns a sample certificate for the example circuit.
     pub(super) fn sample_certificate() -> Certificate<CurrentNetwork> {
-        static INSTANCE: OnceCell<Certificate<CurrentNetwork>> = OnceCell::new();
+        static INSTANCE: OnceLock<Certificate<CurrentNetwork>> = OnceLock::new();
         INSTANCE
             .get_or_init(|| {
                 let (proving_key, verifying_key) = sample_keys();

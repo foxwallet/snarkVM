@@ -30,12 +30,11 @@ impl<N: Network> Process<N> {
         // Construct the locator.
         let locator = Locator::new(*request.program_id(), *request.function_name());
 
-        #[cfg(feature = "aleo-cli")]
-        println!("{}", format!(" • Executing '{locator}'...",).dimmed());
+        dev_println!("{}", format!(" • Executing '{locator}'...",));
 
-        // This is the root request and does not have a caller.
+        // The root request does not have a caller.
         let caller = None;
-        // This is the root request and we do not have a root_tvk to pass on.
+        // The root request does not have to pass on another request's root_tvk.
         let root_tvk = None;
         // Initialize the trace.
         let trace = Arc::new(RwLock::new(Trace::new()));

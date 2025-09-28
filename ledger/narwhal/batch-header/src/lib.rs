@@ -17,6 +17,8 @@
 #![warn(clippy::cast_possible_truncation)]
 #![allow(clippy::too_many_arguments)]
 
+extern crate snarkvm_console as console;
+
 mod bytes;
 mod serialize;
 mod string;
@@ -27,7 +29,7 @@ use console::{
     prelude::*,
     types::Field,
 };
-use narwhal_transmission_id::TransmissionID;
+use snarkvm_ledger_narwhal_transmission_id::TransmissionID;
 
 use indexmap::IndexSet;
 
@@ -56,10 +58,6 @@ pub struct BatchHeader<N: Network> {
 }
 
 impl<N: Network> BatchHeader<N> {
-    /// The maximum number of microcredits that can be spent on compute by the transactions in a batch.
-    /// This implies the block spend limit is bounded at `TRANSACTION_SPEND_LIMIT * N::NUM_MAX_CERTIFICATES`.
-    // TODO: div by 20 is temporary until we can dial in what the limit should be.
-    pub const BATCH_SPEND_LIMIT: u64 = N::TRANSACTION_SPEND_LIMIT * Self::MAX_TRANSMISSIONS_PER_BATCH as u64 / 20;
     /// The maximum number of rounds to store before garbage collecting.
     pub const MAX_GC_ROUNDS: usize = 100;
     /// The maximum number of transmissions in a batch.
@@ -67,6 +65,16 @@ impl<N: Network> BatchHeader<N> {
     /// This limit can be increased in the future as performance improves. Alternatively,
     /// the rate of block production can be sped up to compensate for the limit set here.
     pub const MAX_TRANSMISSIONS_PER_BATCH: usize = 50;
+}
+
+impl<N: Network> BatchHeader<N> {
+    /// The maximum number of microcredits that can be spent on compute by the transactions in a batch.
+    /// This implies the block spend limit is bounded at batch_spend_limit * N::NUM_MAX_CERTIFICATES` * MAX_GC_ROUNDS.
+    // TODO: div by 20 is temporary until we can dial in what the limit should be.
+    pub fn batch_spend_limit(height: u32) -> u64 {
+        consensus_config_value!(N, TRANSACTION_SPEND_LIMIT, height).unwrap() * Self::MAX_TRANSMISSIONS_PER_BATCH as u64
+            / 20
+    }
 }
 
 impl<N: Network> BatchHeader<N> {
@@ -257,7 +265,7 @@ pub mod test_helpers {
 
     /// Returns a sample batch header, sampled at random.
     pub fn sample_batch_header(rng: &mut TestRng) -> BatchHeader<CurrentNetwork> {
-        sample_batch_header_for_round(rng.gen(), rng)
+        sample_batch_header_for_round(rng.r#gen(), rng)
     }
 
     /// Returns a sample batch header with a given round; the rest is sampled at random.
@@ -295,8 +303,9 @@ pub mod test_helpers {
         // Sample the committee ID.
         let committee_id = Field::<CurrentNetwork>::rand(rng);
         // Sample transmission IDs.
-        let transmission_ids =
-            narwhal_transmission_id::test_helpers::sample_transmission_ids(rng).into_iter().collect::<IndexSet<_>>();
+        let transmission_ids = snarkvm_ledger_narwhal_transmission_id::test_helpers::sample_transmission_ids(rng)
+            .into_iter()
+            .collect::<IndexSet<_>>();
         // Checkpoint the timestamp for the batch.
         let timestamp = OffsetDateTime::now_utc().unix_timestamp();
         // Return the batch header.
@@ -326,12 +335,17 @@ mod tests {
 
     #[test]
     fn test_max_synthesis_cost_below_batch_spend_limit() {
-        fn max_synthesis_cost<N: Network>() -> u64 {
-            N::MAX_DEPLOYMENT_VARIABLES.saturating_add(N::MAX_DEPLOYMENT_CONSTRAINTS) * N::SYNTHESIS_FEE_MULTIPLIER
+        fn max_synthesis_cost_valid<N: Network>() {
+            let max_synthesis_cost = N::MAX_DEPLOYMENT_VARIABLES.saturating_add(N::MAX_DEPLOYMENT_CONSTRAINTS)
+                * N::SYNTHESIS_FEE_MULTIPLIER
+                / N::ARC_0005_COMPUTE_DISCOUNT;
+            for (_, height) in N::CONSENSUS_VERSION_HEIGHTS().iter() {
+                assert!(max_synthesis_cost < BatchHeader::<N>::batch_spend_limit(*height));
+            }
         }
 
-        assert!(max_synthesis_cost::<CanaryV0>() < BatchHeader::<CanaryV0>::BATCH_SPEND_LIMIT);
-        assert!(max_synthesis_cost::<TestnetV0>() < BatchHeader::<TestnetV0>::BATCH_SPEND_LIMIT);
-        assert!(max_synthesis_cost::<MainnetV0>() < BatchHeader::<MainnetV0>::BATCH_SPEND_LIMIT);
+        max_synthesis_cost_valid::<CanaryV0>();
+        max_synthesis_cost_valid::<TestnetV0>();
+        max_synthesis_cost_valid::<MainnetV0>();
     }
 }
