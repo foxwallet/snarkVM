@@ -34,12 +34,12 @@ dev-print = [ "snarkvm-utilities/dev-print" ]
 
 [dependencies.snarkvm-curves]
 path = "../curves"
-version = "=4.0.0"
+version = "=4.2.1"
 default-features = false
 
 [dependencies.snarkvm-utilities]
 path = "../utilities"
-version = "=4.0.0"
+version = "=4.2.1"
 
 [dependencies.aleo-std]
 version = "1.0.1"

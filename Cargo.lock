@@ -3638,7 +3638,7 @@ dependencies = [
  "aleo-std",
  "anyhow",
  "cfg-if",
- "colored 3.0.0",
+ "colored 2.2.0",
  "curl",
  "encoding",
  "hex",
