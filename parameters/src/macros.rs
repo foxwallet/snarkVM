@@ -13,18 +13,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub static mut DIR: Option<String> = None;
+use once_cell::sync::Lazy;
+use std::sync::Mutex;
+
+static DIR: Lazy<Mutex<Option<String>>> = Lazy::new(|| Mutex::new(None));
 
 pub fn set_dir(dir: String) {
-    unsafe {
-        DIR = Some(dir);
-    }
+    let mut d = DIR.lock().unwrap();
+    *d = Some(dir);
 }
 
 pub fn get_dir() -> Option<String> {
-    unsafe {
-        DIR.clone()
-    }
+    let d = DIR.lock().unwrap();
+    d.clone()
 }
 
 #[macro_export]
@@ -82,7 +83,7 @@ macro_rules! impl_store_and_remote_fetch {
             Ok(())
         }
 
-        #[cfg(all(not(feature = "remote"), not(target_env = "sgx")))]
+        #[cfg(all(not(feature = "wasm"), not(target_env = "sgx")))]
         fn remote_fetch(buffer: &mut Vec<u8>, url: &str) -> Result<(), $crate::errors::ParameterError> {
             let mut easy = curl::easy::Easy::new();
             easy.follow_location(true)?;
@@ -204,7 +205,7 @@ macro_rules! impl_load_bytes_logic_remote {
 
                     // Load remote file
                     cfg_if::cfg_if!{
-                        if #[cfg(all(not(feature = "remote"), not(target_env = "sgx")))] {
+                        if #[cfg(feature = "remote")] {
                             let url = format!("{}/{}", $remote_url, $filename);
                             let mut buffer = vec![];
                             Self::remote_fetch(&mut buffer, &url)?;
