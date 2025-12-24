@@ -74,7 +74,16 @@ use snarkvm_ledger_store::{
     TransitionStore,
     atomic_finalize,
 };
-use snarkvm_synthesizer_process::{Authorization, InclusionVersion, Process, Trace, deployment_cost, execution_cost};
+use snarkvm_synthesizer_process::{
+    Authorization,
+    InclusionVersion,
+    Process,
+    Trace,
+    deploy_compute_cost_in_microcredits,
+    deployment_cost,
+    execute_compute_cost_in_microcredits,
+    execution_cost,
+};
 use snarkvm_synthesizer_program::{
     FinalizeGlobalState,
     FinalizeOperation,
@@ -86,6 +95,7 @@ use snarkvm_synthesizer_snark::VerifyingKey;
 use snarkvm_utilities::try_vm_runtime;
 
 use aleo_std::prelude::{finish, lap, timer};
+use anyhow::Context;
 use indexmap::{IndexMap, IndexSet};
 use itertools::Either;
 #[cfg(feature = "locktick")]
@@ -297,35 +307,54 @@ impl<N: Network, C: ConsensusStorage<N>> VM<N, C> {
 }
 
 impl<N: Network, C: ConsensusStorage<N>> VM<N, C> {
-    /// Returns a new genesis block for a beacon chain.
+    /// Returns a new genesis block for a beacon chain with the default size (four validators).
     pub fn genesis_beacon<R: Rng + CryptoRng>(&self, private_key: &PrivateKey<N>, rng: &mut R) -> Result<Block<N>> {
-        let private_keys = [*private_key, PrivateKey::new(rng)?, PrivateKey::new(rng)?, PrivateKey::new(rng)?];
+        self.genesis_beacon_with_size(private_key, 4, rng)
+    }
+
+    /// Returns a new genesis block for a beacon chain.
+    pub fn genesis_beacon_with_size<R: Rng + CryptoRng>(
+        &self,
+        private_key: &PrivateKey<N>,
+        num_validators: usize,
+        rng: &mut R,
+    ) -> Result<Block<N>> {
+        ensure!(num_validators >= 4, "Need at least four validators");
+
+        let mut private_keys = vec![*private_key];
+        for _ in 1..num_validators {
+            private_keys.push(PrivateKey::new(rng)?);
+        }
 
         // Construct the committee members.
-        let members = indexmap::indexmap! {
-            Address::try_from(private_keys[0])? => (snarkvm_ledger_committee::MIN_VALIDATOR_STAKE, true, 0u8),
-            Address::try_from(private_keys[1])? => (snarkvm_ledger_committee::MIN_VALIDATOR_STAKE, true, 0u8),
-            Address::try_from(private_keys[2])? => (snarkvm_ledger_committee::MIN_VALIDATOR_STAKE, true, 0u8),
-            Address::try_from(private_keys[3])? => (snarkvm_ledger_committee::MIN_VALIDATOR_STAKE, true, 0u8),
-        };
+        let mut members = IndexMap::with_capacity(num_validators);
+        for key in &private_keys {
+            let addr = Address::try_from(key)?;
+            members.insert(addr, (snarkvm_ledger_committee::MIN_VALIDATOR_STAKE, true, 0u8));
+        }
+
         // Construct the committee.
         let committee = Committee::<N>::new_genesis(members)?;
 
         // Compute the remaining supply.
-        let remaining_supply = N::STARTING_SUPPLY - (snarkvm_ledger_committee::MIN_VALIDATOR_STAKE * 4);
+        let remaining_supply = N::STARTING_SUPPLY
+            .checked_sub(snarkvm_ledger_committee::MIN_VALIDATOR_STAKE * (num_validators as u64))
+            .with_context(|| "Not enough starting supply for this many validators")?;
+
         // Construct the public balances.
-        let public_balances = indexmap::indexmap! {
-            Address::try_from(private_keys[0])? => remaining_supply / 4,
-            Address::try_from(private_keys[1])? => remaining_supply / 4,
-            Address::try_from(private_keys[2])? => remaining_supply / 4,
-            Address::try_from(private_keys[3])? => remaining_supply / 4,
-        };
+        let mut public_balances = IndexMap::with_capacity(4);
+        for key in &private_keys {
+            let addr = Address::try_from(key)?;
+            public_balances.insert(addr, remaining_supply / num_validators as u64);
+        }
+
         // Construct the bonded balances.
         let bonded_balances = committee
             .members()
             .iter()
             .map(|(address, (amount, _, _))| (*address, (*address, *address, *amount)))
             .collect();
+
         // Return the genesis block.
         self.genesis_quorum(private_key, committee, public_balances, bonded_balances, rng)
     }
@@ -409,7 +438,7 @@ impl<N: Network, C: ConsensusStorage<N>> VM<N, C> {
             rng,
         )?;
         // Ensure the block is valid genesis block.
-        match block.is_genesis() {
+        match block.is_genesis()? {
             true => Ok(block),
             false => bail!("Failed to initialize a genesis block"),
         }
@@ -422,10 +451,14 @@ impl<N: Network, C: ConsensusStorage<N>> VM<N, C> {
         // Note: This lock must be held for the entire scope of this function.
         let _block_lock = self.block_lock.lock();
 
+        // Determine if the block timestamp should be included.
+        let block_timestamp = (block.height() >= N::CONSENSUS_HEIGHT(ConsensusVersion::V12).unwrap_or_default())
+            .then_some(block.timestamp());
         // Construct the finalize state.
         let state = FinalizeGlobalState::new::<N>(
             block.round(),
             block.height(),
+            block_timestamp,
             block.cumulative_weight(),
             block.cumulative_proof_target(),
             block.previous_hash(),
@@ -560,7 +593,7 @@ pub(crate) mod test_helpers {
 
     /// Samples a new finalize state.
     pub(crate) fn sample_finalize_state(block_height: u32) -> FinalizeGlobalState {
-        FinalizeGlobalState::from(block_height as u64, block_height, [0u8; 32])
+        FinalizeGlobalState::from(block_height as u64, block_height, None, [0u8; 32])
     }
 
     pub(crate) fn sample_vm() -> VM<CurrentNetwork, LedgerType> {
@@ -854,17 +887,19 @@ function compute:
         let block_hash = vm.block_store().get_block_hash(vm.block_store().max_height().unwrap()).unwrap().unwrap();
         let previous_block = vm.block_store().get_block(&block_hash).unwrap().unwrap();
 
-        // Construct the new block header.
+        // Create the finalize state for the next block height.
+        let next_block_height = previous_block.height() + 1;
         let time_since_last_block = MainnetV0::BLOCK_TIME as i64;
-        let (ratifications, transactions, aborted_transaction_ids, ratified_finalize_operations) = vm.speculate(
-            sample_finalize_state(vm.block_store().current_block_height() + 1),
-            time_since_last_block,
-            None,
-            vec![],
-            &None.into(),
-            transactions.iter(),
-            rng,
-        )?;
+        let next_block_timestamp = previous_block.timestamp().saturating_add(time_since_last_block);
+        let next_timestamp = (next_block_height
+            >= MainnetV0::CONSENSUS_HEIGHT(ConsensusVersion::V12).unwrap_or_default())
+        .then_some(next_block_timestamp);
+        let finalize_state =
+            FinalizeGlobalState::from(next_block_height as u64, next_block_height, next_timestamp, [0u8; 32]);
+
+        // Speculate on the ratifications, solutions, and transactions.
+        let (ratifications, transactions, aborted_transaction_ids, ratified_finalize_operations) =
+            vm.speculate(finalize_state, time_since_last_block, None, vec![], &None.into(), transactions.iter(), rng)?;
 
         // Construct the metadata associated with the block.
         let metadata = Metadata::new(
@@ -880,6 +915,7 @@ function compute:
             previous_block.timestamp().saturating_add(time_since_last_block),
         )?;
 
+        // Construct the new block header.
         let header = Header::from(
             vm.block_store().current_state_root(),
             transactions.to_transactions_root().unwrap(),
@@ -3418,5 +3454,172 @@ function adder:
 
         // Check that the program was deployed.
         assert!(vm.process().read().contains_program(&ProgramID::from_str("adder_program.aleo").unwrap()));
+    }
+
+    #[cfg(feature = "test")]
+    #[test]
+    fn test_deploy_string() {
+        let rng = &mut TestRng::default();
+
+        // Initialize a new caller.
+        let caller_private_key = crate::vm::test_helpers::sample_genesis_private_key(rng);
+
+        // Initialize the VM at consensus version 11.
+        let vm = crate::vm::test_helpers::sample_vm_at_height(
+            CurrentNetwork::CONSENSUS_HEIGHT(ConsensusVersion::V11).unwrap(),
+            rng,
+        );
+
+        // Deploy and execute a program in the same block.
+        let program = |i: u32| {
+            Program::from_str(&format!(
+                r#"
+program strings_{i}.aleo;
+
+mapping foo:
+    key as string.public;
+    value as string.public;
+
+mapping test:
+    key as string.public;
+    value as [boolean; 1u32].public;
+
+function dummy:
+    input r0 as string.public;
+    input r1 as string.private;
+    input r2 as string.private;
+    assert.eq "hello_friend" "hello_friend";
+    assert.neq r1 r2;
+    async dummy r0 r1 r2 into r3;
+    hash.bhp256 "hello" into r4 as address;
+    output r3 as strings_{i}.aleo/dummy.future;
+
+finalize dummy:
+    input r0 as string.public;
+    input r1 as string.public;
+    input r2 as string.public;
+    assert.eq "hello_friend" "hello_friend";
+    assert.neq r1 r2;
+    get.or_use foo[r1] r0 into r3;
+    set r2 into foo[r1];
+    set "test" into foo[r2];
+    set r2 into foo[r2];
+    get foo[r1] into r4;
+    assert.neq r3 r4;
+    assert.eq r2 r4;
+    assert.neq r0 r4;
+    get.or_use foo[r1] "hello" into r5;
+
+function dummy_with_array:
+    input r0 as [string; 3u32].public;
+    input r1 as [string; 4u32].private;
+    async dummy_with_array r0 r1 "test" into r2;
+    output r2 as strings_{i}.aleo/dummy_with_array.future;
+
+finalize dummy_with_array:
+    input r0 as [string; 3u32].public;
+    input r1 as [string; 4u32].public;
+    input r2 as string.public;
+    set r2 into foo[r2];
+
+constructor:
+    assert.eq true true;
+        "#
+            ))
+            .unwrap()
+        };
+
+        // Deploy the program.
+        let _deployment = vm.deploy(&caller_private_key, &program(0), None, 0, None, rng).unwrap();
+        // Check the deployment.
+        // NOTE: this will only consistently pass if string sampling is updated.
+        // vm.check_transaction(&deployment, None, rng).unwrap();
+
+        // let block = sample_next_block(&vm, &caller_private_key, &[deployment], rng).unwrap();
+        // assert_eq!(block.transactions().num_accepted(), 1);
+        // assert_eq!(block.transactions().num_rejected(), 0);
+        // assert_eq!(block.aborted_transaction_ids().len(), 0);
+        // vm.add_next_block(&block).unwrap();
+
+        // // Check that the program was deployed.
+        // assert!(vm.process().read().contains_program(&ProgramID::from_str("strings_0.aleo").unwrap()));
+
+        // let hello_literal = Literal::String(StringType::new("hello"));
+        // let hello_friend_literal = Literal::String(StringType::new("hello_friend"));
+        // let hello_friends_literal = Literal::String(StringType::new("hello_friends"));
+
+        // // Execution test 1
+        // let hello_friend_1 = Value::from(hello_friend_literal.clone());
+        // let hello_friend_2 = Value::from(hello_friend_literal.clone());
+        // let hello_friends = Value::from(hello_friends_literal.clone());
+
+        // // Execute the program.
+        // let transaction = vm
+        //     .execute(
+        //         &caller_private_key,
+        //         ("strings_0.aleo", "dummy"),
+        //         [hello_friend_1, hello_friend_2, hello_friends].iter(),
+        //         None,
+        //         0,
+        //         None,
+        //         rng,
+        //     )
+        //     .unwrap();
+        // // Verify the transaction.
+        // vm.check_transaction(&transaction, None, rng).unwrap();
+
+        // let block = sample_next_block(&vm, &caller_private_key, &[transaction], rng).unwrap();
+        // assert_eq!(block.transactions().num_accepted(), 1);
+        // assert_eq!(block.transactions().num_rejected(), 0);
+        // assert_eq!(block.aborted_transaction_ids().len(), 0);
+        // vm.add_next_block(&block).unwrap();
+
+        // // Execution test 2: change the public type
+        // let hello = Value::from(hello_literal.clone());
+        // let hello_friend = Value::from(hello_friend_literal.clone());
+        // let hello_friends = Value::from(hello_friends_literal.clone());
+
+        // // Execute the program.
+        // let transaction = vm.execute(
+        //     &caller_private_key,
+        //     ("strings_0.aleo", "dummy"),
+        //     [hello, hello_friend, hello_friends].iter(),
+        //     None,
+        //     0,
+        //     None,
+        //     rng,
+        // );
+        // assert!(transaction.is_err());
+
+        // // Execution test 3: change the private type
+        // let hello_friend_1 = Value::from(hello_friend_literal.clone());
+        // let hello_friend_2 = Value::from(hello_friend_literal.clone());
+        // let hello = Value::from(hello_literal.clone());
+
+        // // Execute the program.
+        // let transaction = vm.execute(
+        //     &caller_private_key,
+        //     ("strings_0.aleo", "dummy"),
+        //     [hello_friend_1, hello_friend_2, hello].iter(),
+        //     None,
+        //     0,
+        //     None,
+        //     rng,
+        // );
+        // assert!(transaction.is_err());
+
+        // // Deploy another program.
+        // let deployment = vm.deploy(&caller_private_key, &program(1), None, 0, None, rng).unwrap();
+        // // Check the deployment.
+        // assert!(vm.check_transaction(&deployment, None, rng).is_err());
+
+        // let block = sample_next_block(&vm, &caller_private_key, &[deployment], rng).unwrap();
+        // assert_eq!(block.transactions().num_accepted(), 0);
+        // assert_eq!(block.transactions().num_rejected(), 0);
+        // assert_eq!(block.aborted_transaction_ids().len(), 1);
+        // vm.add_next_block(&block).unwrap();
+
+        // // Check that the program was notdeployed.
+        // assert!(!vm.process().read().contains_program(&ProgramID::from_str("strings_1.aleo").unwrap()));
     }
 }

@@ -34,8 +34,8 @@ pub use bytes::*;
 pub mod defer;
 pub use defer::*;
 
-pub mod error;
-pub use error::*;
+mod vm_error;
+pub use vm_error::*;
 
 pub mod iterator;
 pub use iterator::*;
@@ -50,9 +50,13 @@ mod print;
 pub mod rand;
 pub use self::rand::*;
 
+/// Helpers for data (de-)serialization.
 pub mod serialize;
 pub use serialize::*;
 
-pub fn error<S: ToString>(msg: S) -> std::io::Error {
-    std::io::Error::other(msg.to_string())
-}
+/// Helpers for error handling.
+pub mod errors;
+pub use errors::*;
+
+/// Use old name for backward-compatibility.
+pub use errors::io_error as error;

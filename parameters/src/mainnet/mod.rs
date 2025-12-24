@@ -36,8 +36,11 @@ impl_mobile_local!(Degree22, "resources/", "powers-of-beta-22", "usrs");
 impl_mobile_local!(Degree23, "resources/", "powers-of-beta-23", "usrs");
 impl_mobile_local!(Degree24, "resources/", "powers-of-beta-24", "usrs");
 impl_mobile_local!(Degree25, "resources/", "powers-of-beta-25", "usrs");
+#[cfg(feature = "large_params")]
 impl_mobile_local!(Degree26, "resources/", "powers-of-beta-26", "usrs");
+#[cfg(feature = "large_params")]
 impl_mobile_local!(Degree27, "resources/", "powers-of-beta-27", "usrs");
+#[cfg(feature = "large_params")]
 impl_mobile_local!(Degree28, "resources/", "powers-of-beta-28", "usrs");
 
 // Shifted Degrees
@@ -52,7 +55,9 @@ impl_mobile_local!(ShiftedDegree22, "resources/", "shifted-powers-of-beta-22", "
 impl_mobile_local!(ShiftedDegree23, "resources/", "shifted-powers-of-beta-23", "usrs");
 impl_mobile_local!(ShiftedDegree24, "resources/", "shifted-powers-of-beta-24", "usrs");
 impl_mobile_local!(ShiftedDegree25, "resources/", "shifted-powers-of-beta-25", "usrs");
+#[cfg(feature = "large_params")]
 impl_mobile_local!(ShiftedDegree26, "resources/", "shifted-powers-of-beta-26", "usrs");
+#[cfg(feature = "large_params")]
 impl_mobile_local!(ShiftedDegree27, "resources/", "shifted-powers-of-beta-27", "usrs");
 
 // Powers of Beta Times Gamma * G

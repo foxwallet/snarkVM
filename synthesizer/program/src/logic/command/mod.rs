@@ -50,7 +50,7 @@ use crate::{
     StackTrait,
 };
 use console::{
-    network::prelude::*,
+    network::{error, prelude::*},
     program::{Identifier, Register},
 };
 
@@ -192,6 +192,19 @@ impl<N: Network> Command<N> {
             }
             // Finalize the `position` command, and return no finalize operation.
             Command::Position(position) => position.finalize().map(|_| None),
+        }
+    }
+
+    /// Returns `true` if the command contains a string type.
+    pub fn contains_string_type(&self) -> bool {
+        self.operands().iter().any(|operand| operand.contains_string_type())
+    }
+
+    /// Returns `true` if the command contains an array type with a size that exceeds the given maximum.
+    pub fn exceeds_max_array_size(&self, max_array_size: u32) -> bool {
+        match self {
+            Command::Instruction(instruction) => instruction.exceeds_max_array_size(max_array_size),
+            _ => false,
         }
     }
 }
