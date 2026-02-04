@@ -1771,6 +1771,17 @@ dependencies = [
 
 [[package]]
 name = "locktick"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "307f02aff720d58003290879abe635b818b2176488c5ba2855ab9c11b4e0c04e"
+dependencies = [
+ "backtrace",
+ "parking_lot",
+ "simple_moving_average",
+]
+
+[[package]]
+name = "locktick"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4a4a7c4b9459e549968abf200cb77c6faf0bdedc87df5065f73ca95031795050"
@@ -3341,7 +3352,7 @@ dependencies = [
  "bincode",
  "criterion",
  "indexmap 2.12.0",
- "locktick",
+ "locktick 0.4.0",
  "lru",
  "parking_lot",
  "rand 0.8.5",
@@ -3529,7 +3540,7 @@ dependencies = [
  "bincode",
  "criterion",
  "indexmap 2.12.0",
- "locktick",
+ "locktick 0.4.0",
  "lru",
  "parking_lot",
  "rand 0.8.5",
@@ -3549,7 +3560,7 @@ dependencies = [
  "anyhow",
  "colored 3.0.0",
  "indexmap 2.12.0",
- "locktick",
+ "locktick 0.4.0",
  "lru",
  "parking_lot",
  "rand 0.8.5",
@@ -3588,7 +3599,7 @@ dependencies = [
  "anyhow",
  "bincode",
  "indexmap 2.12.0",
- "locktick",
+ "locktick 0.4.0",
  "parking_lot",
  "rayon",
  "rocksdb",
@@ -3647,7 +3658,8 @@ dependencies = [
  "hex",
  "js-sys",
  "lazy_static",
- "locktick",
+ "locktick 0.3.0",
+ "once_cell",
  "parking_lot",
  "paste",
  "rand 0.8.5",
@@ -3678,7 +3690,7 @@ dependencies = [
  "indexmap 2.12.0",
  "itertools 0.14.0",
  "k256",
- "locktick",
+ "locktick 0.4.0",
  "lru",
  "parking_lot",
  "rand 0.8.5",
@@ -3716,7 +3728,7 @@ dependencies = [
  "colored 3.0.0",
  "criterion",
  "indexmap 2.12.0",
- "locktick",
+ "locktick 0.4.0",
  "parking_lot",
  "rand 0.8.5",
  "rand_chacha 0.3.1",
