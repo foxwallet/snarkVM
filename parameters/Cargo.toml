@@ -99,9 +99,6 @@ version = "0.3.64"
 features = [ "XmlHttpRequest" ]
 optional = true
 
-[target.'cfg(all(not(target_family = "wasm"), not(target_env = "sgx")))'.dependencies.curl]
-version = "0.4.43"
-
 [dev-dependencies.snarkvm-algorithms]
 path = "../algorithms"
 default-features = false

@@ -39,13 +39,6 @@ pub enum ParameterError {
     FilesystemDisabled,
 }
 
-#[cfg(all(not(feature = "remote"), not(target_env = "sgx")))]
-impl From<curl::Error> for ParameterError {
-    fn from(error: curl::Error) -> Self {
-        ParameterError::Crate("curl::error", format!("{error:?}"))
-    }
-}
-
 impl From<std::io::Error> for ParameterError {
     fn from(error: std::io::Error) -> Self {
         ParameterError::Crate("std::io", format!("{error:?}"))
