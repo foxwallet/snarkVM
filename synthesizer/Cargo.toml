@@ -1,6 +1,6 @@
 [package]
 name = "snarkvm-synthesizer"
-version = "4.4.0"
+version = "4.11.0"
 authors = [ "The Aleo Team <hello@aleo.org>" ]
 description = "Synthesizer for a decentralized virtual machine"
 homepage = "https://aleo.org"
@@ -33,7 +33,9 @@ locktick = [
 ]
 async = [ "snarkvm-ledger-query/async", "snarkvm-synthesizer-process/async" ]
 cuda = [ "snarkvm-algorithms/cuda" ]
-history = [ "serde" ]
+history = [ "snarkvm-ledger-store/history", "snarkvm-synthesizer-process/history" ]
+history-staking-rewards = [ "snarkvm-ledger-store/history-staking-rewards" ]
+slipstream-plugins = [ "snarkvm-ledger-store/slipstream-plugins" ]
 rocks = [ "snarkvm-ledger-store/rocks" ]
 serial = [
   "snarkvm-console/serial",
@@ -46,7 +48,8 @@ serial = [
   "snarkvm-synthesizer-snark/serial"
 ]
 setup = [ ]
-test = [ "snarkvm-console/test", "snarkvm-synthesizer-process/test" ]
+test = [ "snarkvm-console/test", "snarkvm-ledger-store/test", "snarkvm-synthesizer-process/test" ]
+test-old-consensus-versions = [ "test" ]
 timer = [ "aleo-std/timer" ]
 wasm = [
   "snarkvm-console/wasm",
@@ -58,12 +61,25 @@ wasm = [
   "snarkvm-synthesizer-program/wasm",
   "snarkvm-synthesizer-snark/wasm"
 ]
-dev-print = [ "snarkvm-utilities/dev-print" ]
+dev-print = [ "snarkvm-utilities/dev-print", "snarkvm-console/dev-print" ]
 dev_skip_checks = [ "snarkvm-synthesizer-process/dev_skip_checks" ]
+snark-print = [ "snarkvm-algorithms/snark-print" ]
+test_consensus_heights = [ "snarkvm-synthesizer-process/test_consensus_heights" ]
+memory-intensive = [ ]
 
 [[bench]]
 name = "kary_merkle_tree"
 path = "benches/kary_merkle_tree.rs"
+harness = false
+
+[[bench]]
+name = "total_deployment_verification"
+path = "benches/total_deployment_verification.rs"
+harness = false
+
+[[bench]]
+name = "check_transaction_multirecord"
+path = "benches/check_transaction_multirecord/main.rs"
 harness = false
 
 [dependencies.snarkvm-algorithms]
@@ -73,6 +89,9 @@ workspace = true
 workspace = true
 
 [dependencies.snarkvm-console]
+workspace = true
+
+[dependencies.snarkvm-ledger-authority]
 workspace = true
 
 [dependencies.snarkvm-ledger-block]
@@ -96,6 +115,9 @@ workspace = true
 features = [ "query" ]
 
 [dependencies.snarkvm-ledger-store]
+workspace = true
+
+[dependencies.snarkvm-synthesizer-error]
 workspace = true
 
 [dependencies.snarkvm-synthesizer-process]
@@ -140,16 +162,19 @@ workspace = true
 [dependencies.rayon]
 workspace = true
 
-[dependencies.serde]
-workspace = true
-optional = true
-
 [dependencies.serde_json]
 workspace = true
 features = [ "preserve_order" ]
 
+[dependencies.tokio]
+version = "1"
+features = [ "sync" ]
+
 [dependencies.tracing]
 workspace = true
+
+[dependencies.tracing-subscriber]
+version = "0.3"
 
 [dev-dependencies.anyhow]
 workspace = true
@@ -164,9 +189,7 @@ workspace = true
 workspace = true
 
 [dev-dependencies.k256]
-version = "0.13"
-features = [ "digest", "ecdsa" ]
-default-features = false
+workspace = true
 
 [dev-dependencies.snarkvm-console]
 workspace = true
@@ -180,9 +203,17 @@ features = [ "test-helpers" ]
 workspace = true
 features = [ "test-helpers" ]
 
+[dev-dependencies.snarkvm-ledger-narwhal-subdag]
+workspace = true
+features = [ "test-helpers" ]
+
 [dev-dependencies.snarkvm-synthesizer-process]
 workspace = true
 features = [ "test" ]
+
+[dev-dependencies.snarkvm-synthesizer-snark]
+workspace = true
+features = [ "test-helpers" ]
 
 [dev-dependencies.snarkvm-ledger-test-helpers]
 path = "../ledger/test-helpers"
@@ -195,6 +226,10 @@ version = "0.9"
 
 [dev-dependencies.tempfile]
 workspace = true
+
+[dev-dependencies.test-log]
+version = "0.2"
+features = [ "trace" ]
 
 [dev-dependencies.walkdir]
 version = "2"

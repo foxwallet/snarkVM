@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2025 Provable Inc.
+// Copyright (c) 2019-2026 Provable Inc.
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,7 +29,7 @@ pub use snarkvm_ledger_narwhal_batch_header::BatchHeader;
 #[cfg(feature = "data")]
 pub use snarkvm_ledger_narwhal_data as data;
 #[cfg(feature = "data")]
-pub use snarkvm_ledger_narwhal_data::Data;
+pub use snarkvm_ledger_narwhal_data::{DATA_ENCODING_OVERHEAD, Data};
 
 #[cfg(feature = "subdag")]
 pub use snarkvm_ledger_narwhal_subdag as subdag;

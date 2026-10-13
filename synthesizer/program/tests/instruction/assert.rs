@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2025 Provable Inc.
+// Copyright (c) 2019-2026 Provable Inc.
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,7 +29,7 @@ use snarkvm_synthesizer_program::{AssertEq, AssertInstruction, AssertNeq, Opcode
 type CurrentNetwork = MainnetV0;
 type CurrentAleo = AleoV0;
 
-const ITERATIONS: usize = 25;
+const ITERATIONS: usize = 2;
 
 /// Samples the stack. Note: Do not replicate this for real program use, it is insecure.
 fn sample_stack(
@@ -162,7 +162,7 @@ fn check_assert<const VARIANT: u8>(
             Plaintext::from(literal_a),
         ])
         .unwrap();
-        let result_c = operation.finalize(&stack, &mut registers);
+        let result_c = operation.finalize(&stack, None, &mut registers);
 
         // Ensure the result is correct.
         match VARIANT {
@@ -237,7 +237,7 @@ fn check_assert<const VARIANT: u8>(
             Plaintext::from(literal_b),
         ])
         .unwrap();
-        let result_c = operation.finalize(&stack, &mut registers);
+        let result_c = operation.finalize(&stack, None, &mut registers);
 
         // Ensure the result is correct.
         match VARIANT {

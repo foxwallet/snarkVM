@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2025 Provable Inc.
+// Copyright (c) 2019-2026 Provable Inc.
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,17 +13,38 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#[cfg(feature = "test")]
+// Tests specific to older consensus versions, not executed in most flows by default.
+#[cfg(feature = "test-old-consensus-versions")]
 mod test_v8;
 
-#[cfg(feature = "test")]
+#[cfg(feature = "test-old-consensus-versions")]
 mod test_v9;
 
-#[cfg(feature = "test")]
+#[cfg(feature = "test-old-consensus-versions")]
 mod test_v10;
 
-#[cfg(feature = "test")]
+#[cfg(feature = "test-old-consensus-versions")]
 mod test_v11;
 
+#[cfg(feature = "test-old-consensus-versions")]
+mod test_v13;
+
+#[cfg(feature = "test-old-consensus-versions")]
+mod test_v14;
+
+// Tests specific to recent consensus versions, executed in more flows than the older ones by
+// default.
 #[cfg(feature = "test")]
+mod test_v15;
+
+#[cfg(feature = "test")]
+mod test_v16;
+
+#[cfg(feature = "test")]
+mod test_v18;
+
+#[cfg(feature = "test")]
+mod test_v20;
+
 use super::*;
+use crate::vm::test_helpers::*;

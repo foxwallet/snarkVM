@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2025 Provable Inc.
+// Copyright (c) 2019-2026 Provable Inc.
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{Opcode, Operand, RegistersCircuit, RegistersTrait, StackTrait};
+use crate::{
+    FinalizeRegistersState,
+    FinalizeStoreTrait,
+    Opcode,
+    Operand,
+    RegistersCircuit,
+    RegistersTrait,
+    StackTrait,
+};
 use circuit::prelude::ToFields as CircuitToFields;
 use console::{
     network::prelude::*,
@@ -72,6 +80,12 @@ impl<N: Network> SignatureVerification<N> {
     #[inline]
     pub fn destinations(&self) -> Vec<Register<N>> {
         vec![self.destination.clone()]
+    }
+
+    /// Returns whether this instruction refers to an external struct.
+    #[inline]
+    pub fn contains_external_struct(&self) -> bool {
+        false
     }
 }
 
@@ -148,7 +162,12 @@ impl<N: Network> SignatureVerification<N> {
 
     /// Finalizes the instruction.
     #[inline]
-    pub fn finalize(&self, stack: &impl StackTrait<N>, registers: &mut impl RegistersTrait<N>) -> Result<()> {
+    pub fn finalize(
+        &self,
+        stack: &impl StackTrait<N>,
+        _store: Option<&dyn FinalizeStoreTrait<N>>,
+        registers: &mut impl FinalizeRegistersState<N>,
+    ) -> Result<()> {
         self.evaluate(stack, registers)
     }
 

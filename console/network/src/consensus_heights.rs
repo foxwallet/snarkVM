@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2025 Provable Inc.
+// Copyright (c) 2019-2026 Provable Inc.
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,11 +16,12 @@
 use crate::{FromBytes, ToBytes, io_error};
 
 use enum_iterator::{Sequence, last};
+use snarkvm_algorithms::snark::varuna::VarunaVersion;
 use std::io;
 
 /// The different consensus versions.
 /// If you need the version active for a specific height, see: `N::CONSENSUS_VERSION`.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Ord, PartialOrd, Sequence)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Ord, PartialOrd, Hash, Sequence)]
 #[repr(u16)]
 pub enum ConsensusVersion {
     /// V1: The initial genesis consensus version.
@@ -47,6 +48,38 @@ pub enum ConsensusVersion {
     V11 = 11,
     /// V12: Prevent connection to forked nodes, disable StringType, enable block timestamp.
     V12 = 12,
+    /// V13: Introduces external structs.
+    V13 = 13,
+    /// V14: Increase the program size limit to 512 kB, the transaction size limit to 540 kB,
+    ///      the array size limit to 2048, and the `Future` argument bit size to 32 bits.
+    ///      Introduces `aleo::GENERATOR`, `aleo::GENERATOR_POWERS`, `snark.verify` opcodes,
+    ///      and dynamic dispatch, and identifier literal types.
+    V14 = 14,
+    /// V15: Introduces the record-existence check and `commit.*.raw` instruction variants.
+    ///      Increase the anchor time to 35.
+    V15 = 15,
+    /// V16: Moves the block's spend limit check to the finalize phase.
+    ///      Supports storing of transaction rejection reasons.
+    ///      Increase the program size limit to 2048 kB and the transaction size limit to 2304 kB.
+    ///      Update the deployment storage cost for programs exceeding 512 kB.
+    V16 = 16,
+    /// V17: NOTE: V17 landed chronologically on mainnet before it landed on testnet.
+    ///      Reverts the anchor time to 25.
+    V17 = 17,
+    /// V18: Enables native credits record translation, introduces block-wide deployment limits,
+    ///      and enforces canonical subDAG certificate ordering.
+    V18 = 18,
+    /// V19: Reverts from the V18 block-wide synthesis limit to per-transaction
+    ///      deployment variable and constraint limits. The first V19 block still
+    ///      uses the block-wide synthesis limit.
+    V19 = 19,
+    /// V20: Adds more accurate type checking for the root call, and bounds the size of every
+    /// `PlaintextType` declared in a deployed program.
+    V20 = 20,
+    /// V21: Activates Varuna V3.
+    V21 = 21,
+    /// V22: TBD
+    V22 = 22,
 }
 
 impl ToBytes for ConsensusVersion {
@@ -71,6 +104,16 @@ impl FromBytes for ConsensusVersion {
             10 => Ok(Self::V10),
             11 => Ok(Self::V11),
             12 => Ok(Self::V12),
+            13 => Ok(Self::V13),
+            14 => Ok(Self::V14),
+            15 => Ok(Self::V15),
+            16 => Ok(Self::V16),
+            17 => Ok(Self::V17),
+            18 => Ok(Self::V18),
+            19 => Ok(Self::V19),
+            20 => Ok(Self::V20),
+            21 => Ok(Self::V21),
+            22 => Ok(Self::V22),
             _ => Err(io_error("Invalid consensus version")),
         }
     }
@@ -106,6 +149,16 @@ pub const CANARY_V0_CONSENSUS_VERSION_HEIGHTS: [(ConsensusVersion, u32); NUM_CON
     (ConsensusVersion::V10, 8_600_000),
     (ConsensusVersion::V11, 9_510_000),
     (ConsensusVersion::V12, 10_030_000),
+    (ConsensusVersion::V13, 10_881_000),
+    (ConsensusVersion::V14, 11_960_000),
+    (ConsensusVersion::V15, u32::MAX),
+    (ConsensusVersion::V16, u32::MAX),
+    (ConsensusVersion::V17, u32::MAX),
+    (ConsensusVersion::V18, u32::MAX),
+    (ConsensusVersion::V19, u32::MAX),
+    (ConsensusVersion::V20, u32::MAX),
+    (ConsensusVersion::V21, u32::MAX),
+    (ConsensusVersion::V22, u32::MAX),
 ];
 
 /// The consensus version height for `MainnetV0`.
@@ -122,6 +175,17 @@ pub const MAINNET_V0_CONSENSUS_VERSION_HEIGHTS: [(ConsensusVersion, u32); NUM_CO
     (ConsensusVersion::V10, 11_205_000),
     (ConsensusVersion::V11, 12_870_000),
     (ConsensusVersion::V12, 13_815_000),
+    (ConsensusVersion::V13, 16_850_000),
+    (ConsensusVersion::V14, 17_700_000),
+    (ConsensusVersion::V15, 19_264_000),
+    (ConsensusVersion::V16, 19_860_000),
+    (ConsensusVersion::V17, 19_860_001),
+    (ConsensusVersion::V18, 20_794_000),
+    (ConsensusVersion::V19, 21_342_000),
+    (ConsensusVersion::V20, 22_175_000),
+    // Target: October 1, 2026 at 21:00 UTC (2 PM PDT)
+    (ConsensusVersion::V21, 22_437_000),
+    (ConsensusVersion::V22, u32::MAX),
 ];
 
 /// The consensus version heights for `TestnetV0`.
@@ -138,9 +202,22 @@ pub const TESTNET_V0_CONSENSUS_VERSION_HEIGHTS: [(ConsensusVersion, u32); NUM_CO
     (ConsensusVersion::V10, 10_525_000),
     (ConsensusVersion::V11, 11_952_000),
     (ConsensusVersion::V12, 12_669_000),
+    (ConsensusVersion::V13, 14_906_000),
+    (ConsensusVersion::V14, 15_370_000),
+    (ConsensusVersion::V15, 16_886_000),
+    (ConsensusVersion::V16, 17_319_000),
+    (ConsensusVersion::V17, 18_295_000),
+    (ConsensusVersion::V18, 18_296_000),
+    (ConsensusVersion::V19, 18_813_000),
+    (ConsensusVersion::V20, 19_374_000),
+    (ConsensusVersion::V21, u32::MAX),
+    (ConsensusVersion::V22, u32::MAX),
 ];
 
 /// The consensus version heights when the `test_consensus_heights` feature is enabled.
+// We want each to come immediately after the previous one by default for faster testing.
+// Whether activating them all at height 0 is possible is open for investigation.
+// If a test needs to stay on one consensus version for a while, consider just locally testing or using a custom `CONSENSUS_VERSION_HEIGHTS` environment variable.
 pub const TEST_CONSENSUS_VERSION_HEIGHTS: [(ConsensusVersion, u32); NUM_CONSENSUS_VERSIONS] = [
     (ConsensusVersion::V1, 0),
     (ConsensusVersion::V2, 5),
@@ -154,6 +231,16 @@ pub const TEST_CONSENSUS_VERSION_HEIGHTS: [(ConsensusVersion, u32); NUM_CONSENSU
     (ConsensusVersion::V10, 13),
     (ConsensusVersion::V11, 14),
     (ConsensusVersion::V12, 15),
+    (ConsensusVersion::V13, 16),
+    (ConsensusVersion::V14, 17),
+    (ConsensusVersion::V15, 18),
+    (ConsensusVersion::V16, 19),
+    (ConsensusVersion::V17, 20),
+    (ConsensusVersion::V18, 21),
+    (ConsensusVersion::V19, 22),
+    (ConsensusVersion::V20, 23),
+    (ConsensusVersion::V21, 24),
+    (ConsensusVersion::V22, 25),
 ];
 
 #[cfg(any(test, feature = "test", feature = "test_consensus_heights"))]
@@ -267,6 +354,18 @@ macro_rules! consensus_config_value_by_version {
     };
 }
 
+/// Returns the Varuna version for the specified consensus version.
+pub fn varuna_version_from_consensus(consensus_version: ConsensusVersion) -> VarunaVersion {
+    // If new varuna versions are added, test_varuna_version_from_consensus below must be updated accordingly.
+    if consensus_version >= ConsensusVersion::V21 {
+        VarunaVersion::V3
+    } else if consensus_version >= ConsensusVersion::V4 {
+        VarunaVersion::V2
+    } else {
+        VarunaVersion::V1
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -303,6 +402,36 @@ mod tests {
             assert!(*version > previous_version);
             previous_version = *version;
         }
+        let mut previous_version = N::CREDITS_PER_SECOND_OF_RUNTIME.first().unwrap().0;
+        for (version, _) in N::CREDITS_PER_SECOND_OF_RUNTIME.iter().skip(1) {
+            assert!(*version > previous_version);
+            previous_version = *version;
+        }
+        let mut previous_version = N::MAX_ARRAY_ELEMENTS.first().unwrap().0;
+        for (version, _) in N::MAX_ARRAY_ELEMENTS.iter().skip(1) {
+            assert!(*version > previous_version);
+            previous_version = *version;
+        }
+        let mut previous_version = N::MAX_PROGRAM_SIZE.first().unwrap().0;
+        for (version, _) in N::MAX_PROGRAM_SIZE.iter().skip(1) {
+            assert!(*version > previous_version);
+            previous_version = *version;
+        }
+        let mut previous_version = N::MAX_TRANSACTION_SIZE.first().unwrap().0;
+        for (version, _) in N::MAX_TRANSACTION_SIZE.iter().skip(1) {
+            assert!(*version > previous_version);
+            previous_version = *version;
+        }
+        let mut previous_version = N::MAX_WRITES.first().unwrap().0;
+        for (version, _) in N::MAX_WRITES.iter().skip(1) {
+            assert!(*version > previous_version);
+            previous_version = *version;
+        }
+        let mut previous_version = N::ANCHOR_TIMES.first().unwrap().0;
+        for (version, _) in N::ANCHOR_TIMES.iter().skip(1) {
+            assert!(*version > previous_version);
+            previous_version = *version;
+        }
     }
 
     /// Ensure that consensus *heights* are unique and incrementing.
@@ -332,6 +461,40 @@ mod tests {
             // Double-check that consensus_config_value returns the correct value.
             assert_eq!(consensus_config_value!(N, TRANSACTION_SPEND_LIMIT, height).unwrap(), *value);
         }
+        for (version, value) in N::CREDITS_PER_SECOND_OF_RUNTIME.iter() {
+            // Ensure that the height at which an update occurs are present in CONSENSUS_VERSION_HEIGHTS.
+            let height = N::CONSENSUS_VERSION_HEIGHTS().iter().find(|(c_version, _)| *c_version == *version).unwrap().1;
+            // Double-check that consensus_config_value returns the correct value.
+            assert_eq!(consensus_config_value!(N, CREDITS_PER_SECOND_OF_RUNTIME, height).unwrap(), *value);
+        }
+        for (version, value) in N::MAX_ARRAY_ELEMENTS.iter() {
+            // Ensure that the height at which an update occurs are present in CONSENSUS_VERSION_HEIGHTS.
+            let height = N::CONSENSUS_VERSION_HEIGHTS().iter().find(|(c_version, _)| *c_version == *version).unwrap().1;
+            // Double-check that consensus_config_value returns the correct value.
+            assert_eq!(consensus_config_value!(N, MAX_ARRAY_ELEMENTS, height).unwrap(), *value);
+        }
+        for (version, value) in N::MAX_PROGRAM_SIZE.iter() {
+            // Ensure that the height at which an update occurs are present in CONSENSUS_VERSION_HEIGHTS.
+            let height = N::CONSENSUS_VERSION_HEIGHTS().iter().find(|(c_version, _)| *c_version == *version).unwrap().1;
+            // Double-check that consensus_config_value returns the correct value.
+            assert_eq!(consensus_config_value!(N, MAX_PROGRAM_SIZE, height).unwrap(), *value);
+        }
+        for (version, value) in N::MAX_TRANSACTION_SIZE.iter() {
+            // Ensure that the height at which an update occurs are present in CONSENSUS_VERSION_HEIGHTS.
+            let height = N::CONSENSUS_VERSION_HEIGHTS().iter().find(|(c_version, _)| *c_version == *version).unwrap().1;
+            // Double-check that consensus_config_value returns the correct value.
+            assert_eq!(consensus_config_value!(N, MAX_TRANSACTION_SIZE, height).unwrap(), *value);
+        }
+        for (version, value) in N::MAX_WRITES.iter() {
+            // Ensure that the height at which an update occurs are present in CONSENSUS_VERSION_HEIGHTS.
+            let height = N::CONSENSUS_VERSION_HEIGHTS().iter().find(|(c_version, _)| *c_version == *version).unwrap().1;
+            // Double-check that consensus_config_value returns the correct value.
+            assert_eq!(consensus_config_value!(N, MAX_WRITES, height).unwrap(), *value);
+        }
+        for (version, value) in N::ANCHOR_TIMES.iter() {
+            let height = N::CONSENSUS_VERSION_HEIGHTS().iter().find(|(c_version, _)| c_version == version).unwrap().1;
+            assert_eq!(consensus_config_value!(N, ANCHOR_TIMES, height).unwrap(), *value);
+        }
     }
 
     /// Ensure that consensus_config_value returns a valid value for all consensus versions.
@@ -339,6 +502,12 @@ mod tests {
         for (_, height) in N::CONSENSUS_VERSION_HEIGHTS().iter() {
             assert!(consensus_config_value!(N, MAX_CERTIFICATES, *height).is_some());
             assert!(consensus_config_value!(N, TRANSACTION_SPEND_LIMIT, *height).is_some());
+            assert!(consensus_config_value!(N, CREDITS_PER_SECOND_OF_RUNTIME, *height).is_some());
+            assert!(consensus_config_value!(N, MAX_ARRAY_ELEMENTS, *height).is_some());
+            assert!(consensus_config_value!(N, MAX_PROGRAM_SIZE, *height).is_some());
+            assert!(consensus_config_value!(N, MAX_TRANSACTION_SIZE, *height).is_some());
+            assert!(consensus_config_value!(N, MAX_WRITES, *height).is_some());
+            assert!(consensus_config_value!(N, ANCHOR_TIMES, *height).is_some());
         }
     }
 
@@ -352,12 +521,92 @@ mod tests {
         }
     }
 
+    /// Ensure that `MAX_ARRAY_ELEMENTS` increases and is correctly defined.
+    /// See the constant declaration for an explanation why.
+    fn max_array_elements_increasing<N: Network>() {
+        let mut previous_value = N::MAX_ARRAY_ELEMENTS.first().unwrap().1;
+        for (_, value) in N::MAX_ARRAY_ELEMENTS.iter().skip(1) {
+            assert!(*value >= previous_value);
+            previous_value = *value;
+        }
+    }
+
+    /// Ensure that `MAX_TRANSACTION_SIZE` is at least 28KB greater than `MAX_PROGRAM_SIZE` for all consensus versions.
+    /// This overhead accounts for proofs, signatures, and other transaction metadata.
+    fn transaction_size_exceeds_program_size<N: Network>() {
+        const MIN_OVERHEAD: usize = 28_000; // 28 kB minimum overhead
+
+        for (_, height) in N::CONSENSUS_VERSION_HEIGHTS().iter() {
+            let max_program_size = consensus_config_value!(N, MAX_PROGRAM_SIZE, *height).unwrap();
+            let max_transaction_size = consensus_config_value!(N, MAX_TRANSACTION_SIZE, *height).unwrap();
+
+            assert!(
+                max_transaction_size >= max_program_size + MIN_OVERHEAD,
+                "At height {height}: MAX_TRANSACTION_SIZE ({max_transaction_size}) must be at least {MIN_OVERHEAD} bytes greater than MAX_PROGRAM_SIZE ({max_program_size})"
+            );
+        }
+    }
+
+    /// Ensure that `MAX_PROGRAM_SIZE` and `MAX_TRANSACTION_SIZE` are defined in lockstep:
+    /// the same number of entries, keyed by the same consensus versions in the same order, with the
+    /// transaction size strictly exceeding the program size at every version. The latest transaction
+    /// size must likewise exceed the latest program size, since a transaction must hold a program
+    /// plus its proofs, signatures, and metadata.
+    fn program_and_transaction_size_aligned<N: Network>() {
+        // Ensure both constants define the same number of entries.
+        assert_eq!(
+            N::MAX_PROGRAM_SIZE.len(),
+            N::MAX_TRANSACTION_SIZE.len(),
+            "MAX_PROGRAM_SIZE and MAX_TRANSACTION_SIZE must define the same number of entries"
+        );
+        // Ensure both constants are keyed by the same consensus versions, in the same order, and that
+        // the transaction size exceeds the program size at each corresponding version.
+        for (index, (program_version, program_size)) in N::MAX_PROGRAM_SIZE.iter().enumerate() {
+            let (transaction_version, transaction_size) = &N::MAX_TRANSACTION_SIZE[index];
+            assert_eq!(
+                program_version, transaction_version,
+                "MAX_PROGRAM_SIZE and MAX_TRANSACTION_SIZE must be keyed by the same consensus version at index {index}, but found {program_version} and {transaction_version}"
+            );
+            assert!(
+                transaction_size > program_size,
+                "At consensus version {program_version}: MAX_TRANSACTION_SIZE ({transaction_size}) must be greater than MAX_PROGRAM_SIZE ({program_size})"
+            );
+        }
+        // Ensure the latest transaction size exceeds the latest program size.
+        assert!(
+            N::LATEST_MAX_TRANSACTION_SIZE() > N::LATEST_MAX_PROGRAM_SIZE(),
+            "LATEST_MAX_TRANSACTION_SIZE ({}) must be greater than LATEST_MAX_PROGRAM_SIZE ({})",
+            N::LATEST_MAX_TRANSACTION_SIZE(),
+            N::LATEST_MAX_PROGRAM_SIZE()
+        );
+    }
+
     /// Ensure that the number of constant definitions is the same across networks.
     fn constants_equal_length<N1: Network, N2: Network, N3: Network>() {
         // If we can construct an array, that means the underlying types must be the same.
         let _ = [N1::CONSENSUS_VERSION_HEIGHTS, N2::CONSENSUS_VERSION_HEIGHTS, N3::CONSENSUS_VERSION_HEIGHTS];
         let _ = [N1::MAX_CERTIFICATES, N2::MAX_CERTIFICATES, N3::MAX_CERTIFICATES];
         let _ = [N1::TRANSACTION_SPEND_LIMIT, N2::TRANSACTION_SPEND_LIMIT, N3::TRANSACTION_SPEND_LIMIT];
+        let _ =
+            [N1::CREDITS_PER_SECOND_OF_RUNTIME, N2::CREDITS_PER_SECOND_OF_RUNTIME, N3::CREDITS_PER_SECOND_OF_RUNTIME];
+        let _ = [N1::MAX_ARRAY_ELEMENTS, N2::MAX_ARRAY_ELEMENTS, N3::MAX_ARRAY_ELEMENTS];
+        let _ = [N1::MAX_PROGRAM_SIZE, N2::MAX_PROGRAM_SIZE, N3::MAX_PROGRAM_SIZE];
+        let _ = [N1::MAX_TRANSACTION_SIZE, N2::MAX_TRANSACTION_SIZE, N3::MAX_TRANSACTION_SIZE];
+        let _ = [N1::MAX_WRITES, N2::MAX_WRITES, N3::MAX_WRITES];
+        let _ = [N1::ANCHOR_TIMES, N2::ANCHOR_TIMES, N3::ANCHOR_TIMES];
+    }
+
+    /// Ensure that `LATEST_MAX_*` functions return valid values without panicking.
+    /// These functions use `.expect()` internally, so this test verifies the arrays are non-empty.
+    fn latest_max_functions_are_safe<N: Network>() {
+        // Verify LATEST_MAX_CERTIFICATES returns a positive value.
+        assert!(N::LATEST_MAX_CERTIFICATES() > 0, "LATEST_MAX_CERTIFICATES must be positive");
+        // Verify LATEST_MAX_PROGRAM_SIZE returns a positive value.
+        assert!(N::LATEST_MAX_PROGRAM_SIZE() > 0, "LATEST_MAX_PROGRAM_SIZE must be positive");
+        // Verify LATEST_MAX_TRANSACTION_SIZE returns a positive value.
+        assert!(N::LATEST_MAX_TRANSACTION_SIZE() > 0, "LATEST_MAX_TRANSACTION_SIZE must be positive");
+        // Verify LATEST_MAX_WRITES returns a positive value.
+        assert!(N::LATEST_MAX_WRITES() > 0, "LATEST_MAX_WRITES must be positive");
     }
 
     #[test]
@@ -387,6 +636,22 @@ mod tests {
         max_certificates_increasing::<TestnetV0>();
         max_certificates_increasing::<CanaryV0>();
 
+        max_array_elements_increasing::<MainnetV0>();
+        max_array_elements_increasing::<TestnetV0>();
+        max_array_elements_increasing::<CanaryV0>();
+
+        transaction_size_exceeds_program_size::<MainnetV0>();
+        transaction_size_exceeds_program_size::<TestnetV0>();
+        transaction_size_exceeds_program_size::<CanaryV0>();
+
+        program_and_transaction_size_aligned::<MainnetV0>();
+        program_and_transaction_size_aligned::<TestnetV0>();
+        program_and_transaction_size_aligned::<CanaryV0>();
+
+        latest_max_functions_are_safe::<MainnetV0>();
+        latest_max_functions_are_safe::<TestnetV0>();
+        latest_max_functions_are_safe::<CanaryV0>();
+
         constants_equal_length::<MainnetV0, TestnetV0, CanaryV0>();
     }
 
@@ -406,5 +671,33 @@ mod tests {
         let invalid_bytes = u16::MAX.to_bytes_le().unwrap();
         let result = ConsensusVersion::from_bytes_le(&invalid_bytes);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_reward_anchor_time() {
+        assert_eq!(MainnetV0::REWARD_ANCHOR_TIME, MainnetV0::ANCHOR_TIMES.first().unwrap().1);
+        assert_eq!(TestnetV0::REWARD_ANCHOR_TIME, TestnetV0::ANCHOR_TIMES.first().unwrap().1);
+        assert_eq!(CanaryV0::REWARD_ANCHOR_TIME, CanaryV0::ANCHOR_TIMES.first().unwrap().1);
+    }
+
+    #[test]
+    fn test_varuna_version_from_consensus() {
+        // Check that all consensus versions map to a valid Varuna version.
+        for consensus_version in enum_iterator::all::<ConsensusVersion>() {
+            let varuna_version = varuna_version_from_consensus(consensus_version);
+            let valid = match varuna_version {
+                VarunaVersion::V1 => consensus_version < ConsensusVersion::V4,
+                VarunaVersion::V2 => (ConsensusVersion::V4..ConsensusVersion::V21).contains(&consensus_version),
+                VarunaVersion::V3 => consensus_version >= ConsensusVersion::V21,
+            };
+            assert!(valid, "{consensus_version:?} incorrectly maps to {varuna_version:?}");
+        }
+
+        // Add spot checks.
+        assert_eq!(varuna_version_from_consensus(ConsensusVersion::V3), VarunaVersion::V1);
+        assert_eq!(varuna_version_from_consensus(ConsensusVersion::V4), VarunaVersion::V2);
+        assert_eq!(varuna_version_from_consensus(ConsensusVersion::V20), VarunaVersion::V2);
+        assert_eq!(varuna_version_from_consensus(ConsensusVersion::V21), VarunaVersion::V3);
+        assert_eq!(varuna_version_from_consensus(ConsensusVersion::V22), VarunaVersion::V3);
     }
 }

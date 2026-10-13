@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2025 Provable Inc.
+// Copyright (c) 2019-2026 Provable Inc.
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -70,6 +70,11 @@ lazy_static! {
     pub static ref CANARY_POSEIDON_4: Poseidon4<CanaryV0> = Poseidon4::<CanaryV0>::setup("AleoPoseidon4").expect("Failed to setup Poseidon4");
     /// The Poseidon hash function, using a rate of 8.
     pub static ref CANARY_POSEIDON_8: Poseidon8<CanaryV0> = Poseidon8::<CanaryV0>::setup("AleoPoseidon8").expect("Failed to setup Poseidon8");
+
+    /// The Poseidon leaf hasher for dynamic records, using a rate of 8.
+    pub static ref CANARY_DYNAMIC_RECORD_LEAF_HASHER: Poseidon8<CanaryV0> = Poseidon8::<CanaryV0>::setup("DynamicRecordLeafHasher").expect("Failed to setup DynamicRecordLeafHasher");
+    /// The Poseidon path hasher for dynamic records, using a rate of 2.
+    pub static ref CANARY_DYNAMIC_RECORD_PATH_HASHER: Poseidon2<CanaryV0> = Poseidon2::<CanaryV0>::setup("DynamicRecordPathHasher").expect("Failed to setup DynamicRecordPathHasher");
 
     pub static ref CANARY_CREDITS_V0_PROVING_KEYS: IndexMap<String, Arc<VarunaProvingKey<Console>>> = {
         let mut map = IndexMap::new();
@@ -324,6 +329,57 @@ impl Network for CanaryV0 {
             Arc::new(
                 CircuitVerifyingKey::from_bytes_le(&snarkvm_parameters::canary::INCLUSION_VERIFYING_KEY[1..])
                     .expect("Failed to load inclusion verifying key."),
+            )
+        })
+    }
+
+    #[cfg(not(feature = "wasm"))]
+    /// Returns the `proving key` for the credits.aleo credits record translation circuit.
+    fn translation_credits_proving_key() -> &'static Arc<VarunaProvingKey<Self>> {
+        static INSTANCE: OnceLock<Arc<VarunaProvingKey<Console>>> = OnceLock::new();
+        INSTANCE.get_or_init(|| {
+            // Skipping the first byte, which is the encoded version.
+            Arc::new(
+                CircuitProvingKey::from_bytes_le(&snarkvm_parameters::canary::TRANSLATION_CREDITS_PROVING_KEY[1..])
+                    .expect("Failed to load translation credits proving key."),
+            )
+        })
+    }
+
+    #[cfg(feature = "wasm")]
+    /// Returns the `proving key` for the translation credits circuit.
+    fn translation_credits_proving_key(
+        translation_credits_key_bytes: Option<Vec<u8>>,
+    ) -> &'static Arc<VarunaProvingKey<Self>> {
+        static INSTANCE: OnceLock<Arc<VarunaProvingKey<Console>>> = OnceLock::new();
+        INSTANCE.get_or_init(|| {
+            translation_credits_key_bytes
+                .map(|bytes| {
+                    snarkvm_parameters::canary::TranslationCreditsProver::verify_bytes(&bytes)
+                        .expect("Bytes provided did not match expected translation credits checksum.");
+                    Arc::new(
+                        CircuitProvingKey::from_bytes_le(&bytes[1..])
+                            .expect("Failed to load translation credits proving key."),
+                    )
+                })
+                .unwrap_or_else(|| {
+                    Arc::new(
+                        CircuitProvingKey::from_bytes_le(
+                            &snarkvm_parameters::canary::TRANSLATION_CREDITS_PROVING_KEY[1..],
+                        )
+                        .expect("Failed to load translation credits proving key."),
+                    )
+                })
+        })
+    }
+
+    /// Returns the `verifying key` for the translation circuit.
+    fn translation_credits_verifying_key() -> &'static Arc<VarunaVerifyingKey<Self>> {
+        static INSTANCE: OnceLock<Arc<VarunaVerifyingKey<Console>>> = OnceLock::new();
+        INSTANCE.get_or_init(|| {
+            Arc::new(
+                CircuitVerifyingKey::from_bytes_le(&snarkvm_parameters::canary::TRANSLATION_CREDITS_VERIFYING_KEY[1..])
+                    .expect("Failed to load translation verifying key."),
             )
         })
     }
@@ -595,6 +651,14 @@ impl Network for CanaryV0 {
         MerkleTree::new(&*CANARY_BHP_1024, &*CANARY_BHP_512, leaves)
     }
 
+    /// Recreates a Merkle tree with a BHP leaf hasher of 1024-bits and a BHP path hasher of
+    /// 512-bits from the given state, e.g. one that was previously cached on disk.
+    fn merkle_tree_bhp_from_state<const DEPTH: u8>(
+        state: MerkleTreeState<'_, Self>,
+    ) -> Result<BHPMerkleTree<Self, DEPTH>> {
+        MerkleTree::from_state(&*CANARY_BHP_1024, &*CANARY_BHP_512, state)
+    }
+
     /// Returns a Merkle tree with a Poseidon leaf hasher with input rate of 4 and a Poseidon path hasher with input rate of 2.
     fn merkle_tree_psd<const DEPTH: u8>(leaves: &[Vec<Field<Self>>]) -> Result<PoseidonMerkleTree<Self, DEPTH>> {
         MerkleTree::new(&*CANARY_POSEIDON_4, &*CANARY_POSEIDON_2, leaves)
@@ -616,6 +680,16 @@ impl Network for CanaryV0 {
         leaf: &Vec<Field<Self>>,
     ) -> bool {
         path.verify(&*CANARY_POSEIDON_4, &*CANARY_POSEIDON_2, root, leaf)
+    }
+
+    /// Returns the Poseidon leaf hasher for dynamic records (rate 8).
+    fn dynamic_record_leaf_hasher() -> &'static Poseidon8<Self> {
+        &CANARY_DYNAMIC_RECORD_LEAF_HASHER
+    }
+
+    /// Returns the Poseidon path hasher for dynamic records (rate 2).
+    fn dynamic_record_path_hasher() -> &'static Poseidon2<Self> {
+        &CANARY_DYNAMIC_RECORD_PATH_HASHER
     }
 }
 

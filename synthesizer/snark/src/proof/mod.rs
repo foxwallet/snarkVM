@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2025 Provable Inc.
+// Copyright (c) 2019-2026 Provable Inc.
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -52,7 +52,7 @@ impl<N: Network> Deref for Proof<N> {
 ///  - `hiding`: indicates whether the proof system is run in ZK mode
 ///
 /// *Returns*:
-///  - `Ok(size)` for `VarunaVersion::V2`, where `size` is the size of the proof
+///  - `Ok(size)` for `VarunaVersion::V2` and `VarunaVersion::V3`, where `size` is the size of the proof
 ///    in bytes.
 ///  - `Err` for `VarunaVersion::V1`.
 pub fn proof_size<N: Network>(

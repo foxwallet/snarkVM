@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2025 Provable Inc.
+// Copyright (c) 2019-2026 Provable Inc.
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -65,13 +65,14 @@ fn prepare_check_deployment<N: Network, A: snarkvm_circuit::Aleo<Network = N>>(
         root_tvk,
         is_root,
         program_checksum,
+        false,
         rng,
     )
     .unwrap();
     // Initialize the assignments.
     let assignments = Assignments::<N>::default();
     // Initialize the call stack.
-    let call_stack = CallStack::CheckDeployment(vec![request], *private_key, assignments.clone(), None, None);
+    let call_stack = CallStack::CheckDeployment(vec![request], *private_key, assignments.clone(), None, None, None);
 
     // Benchmark synthesis of the circuit.
     c.bench_function(&format!("CheckDeployment for {function_name}"), |b| {

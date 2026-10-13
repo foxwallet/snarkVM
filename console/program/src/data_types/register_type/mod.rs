@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2025 Provable Inc.
+// Copyright (c) 2019-2026 Provable Inc.
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,7 +18,7 @@ mod parse;
 mod serialize;
 mod size_in_bits;
 
-use crate::{FinalizeType, Identifier, Locator, PlaintextType, ValueType};
+use crate::{FinalizeType, Identifier, Locator, PlaintextType, ProgramID, ValueType};
 use snarkvm_console_network::prelude::*;
 
 use enum_index::EnumIndex;
@@ -33,6 +33,29 @@ pub enum RegisterType<N: Network> {
     ExternalRecord(Locator<N>),
     /// A future.
     Future(Locator<N>),
+    /// A dynamic record.
+    DynamicRecord,
+    /// A dynamic future.
+    DynamicFuture,
+}
+
+impl<N: Network> RegisterType<N> {
+    // Make unqualified structs or records into external ones with the given `id`.
+    pub fn qualify(self, id: ProgramID<N>) -> Self {
+        match self {
+            RegisterType::Plaintext(plaintext_type) => RegisterType::Plaintext(plaintext_type.qualify(id)),
+            RegisterType::Record(name) => RegisterType::ExternalRecord(Locator::new(id, name)),
+            RegisterType::ExternalRecord(..)
+            | RegisterType::Future(..)
+            | RegisterType::DynamicRecord
+            | RegisterType::DynamicFuture => self,
+        }
+    }
+
+    /// Returns whether this type refers to an external struct.
+    pub fn contains_external_struct(&self) -> bool {
+        matches!(self, RegisterType::Plaintext(t) if t.contains_external_struct())
+    }
 }
 
 impl<N: Network> From<ValueType<N>> for RegisterType<N> {
@@ -45,6 +68,8 @@ impl<N: Network> From<ValueType<N>> for RegisterType<N> {
             ValueType::Record(record_name) => Self::Record(record_name),
             ValueType::ExternalRecord(locator) => Self::ExternalRecord(locator),
             ValueType::Future(locator) => Self::Future(locator),
+            ValueType::DynamicRecord => Self::DynamicRecord,
+            ValueType::DynamicFuture => Self::DynamicFuture,
         }
     }
 }
@@ -62,6 +87,7 @@ impl<N: Network> From<FinalizeType<N>> for RegisterType<N> {
         match finalize {
             FinalizeType::Plaintext(plaintext_type) => Self::Plaintext(plaintext_type),
             FinalizeType::Future(locator) => Self::Future(locator),
+            FinalizeType::DynamicFuture => Self::DynamicFuture,
         }
     }
 }
@@ -72,6 +98,17 @@ impl<N: Network> RegisterType<N> {
         match self {
             Self::Plaintext(plaintext_type) => plaintext_type.contains_string_type(),
             _ => false, // Record, external record, and future types are checked elsewhere.
+        }
+    }
+
+    /// Returns `true` if the register type contains an identifier type.
+    pub fn contains_identifier_type(&self) -> Result<bool> {
+        match self {
+            Self::Plaintext(plaintext_type) => plaintext_type.contains_identifier_type(),
+            // Record, external record, future, and dynamic types cannot contain identifier types.
+            Self::Record(_) | Self::ExternalRecord(_) | Self::Future(_) | Self::DynamicRecord | Self::DynamicFuture => {
+                Ok(false)
+            }
         }
     }
 

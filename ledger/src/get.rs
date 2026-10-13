@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2025 Provable Inc.
+// Copyright (c) 2019-2026 Provable Inc.
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +15,7 @@
 
 use super::*;
 
+// Getters for `Ledger`.
 impl<N: Network, C: ConsensusStorage<N>> Ledger<N, C> {
     /// Returns the committee for the given `block height`.
     pub fn get_committee(&self, block_height: u32) -> Result<Option<Committee<N>>> {
@@ -23,6 +24,15 @@ impl<N: Network, C: ConsensusStorage<N>> Ledger<N, C> {
 
     /// Returns the committee for the given `round`.
     pub fn get_committee_for_round(&self, round: u64) -> Result<Option<Committee<N>>> {
+        // If a devnet committee hotswap is installed and active at this round,
+        // it takes precedence over both the cache and the on-chain committee.
+        #[cfg(feature = "dev-committee")]
+        if let Some(committee) = self.dev_committee.as_ref()
+            && round >= committee.starting_round()
+        {
+            return Ok(Some(committee.clone()));
+        }
+
         // Check if the committee is already in the cache.
         if let Some(committee) = self.committee_cache.lock().get(&round) {
             return Ok(Some(committee.clone()));
@@ -51,6 +61,16 @@ impl<N: Network, C: ConsensusStorage<N>> Ledger<N, C> {
 
     /// Returns the committee lookback for the given round.
     pub fn get_committee_lookback_for_round(&self, round: u64) -> Result<Option<Committee<N>>> {
+        // If a devnet committee hotswap is installed and active at this round,
+        // short-circuit before computing the lookback round (which would otherwise
+        // fall ~100 rounds earlier into the pre-hotswap mainnet committee).
+        #[cfg(feature = "dev-committee")]
+        if let Some(committee) = self.dev_committee.as_ref()
+            && round >= committee.starting_round()
+        {
+            return Ok(Some(committee.clone()));
+        }
+
         // Get the round number for the previous committee. Note, we subtract 2 from odd rounds,
         // because committees are updated in even rounds.
         let previous_round = match round % 2 == 0 {
@@ -223,29 +243,44 @@ impl<N: Network, C: ConsensusStorage<N>> Ledger<N, C> {
 
     /// Returns the transaction for the given transaction ID.
     pub fn get_transaction(&self, transaction_id: N::TransactionID) -> Result<Transaction<N>> {
-        // Retrieve the transaction.
         match self.vm.block_store().get_transaction(&transaction_id)? {
             Some(transaction) => Ok(transaction),
-            None => bail!("Missing transaction for ID {transaction_id}"),
+            None => bail!("Missing transaction '{transaction_id}' in block storage"),
         }
+    }
+
+    /// Returns the transaction for the given transaction ID, or `None` if no transaction of this ID exists.
+    pub fn try_get_transaction(&self, transaction_id: &N::TransactionID) -> Result<Option<Transaction<N>>> {
+        self.vm.block_store().get_transaction(transaction_id)
     }
 
     /// Returns the confirmed transaction for the given transaction ID.
     pub fn get_confirmed_transaction(&self, transaction_id: N::TransactionID) -> Result<ConfirmedTransaction<N>> {
-        // Retrieve the confirmed transaction.
-        match self.vm.block_store().get_confirmed_transaction(&transaction_id)? {
+        match self.try_get_confirmed_transaction(&transaction_id)? {
             Some(confirmed_transaction) => Ok(confirmed_transaction),
             None => bail!("Missing confirmed transaction for ID {transaction_id}"),
         }
     }
 
+    /// Returns the confirmed transaction for the given transaction ID, or `None` if no confirmed transaction of this ID exists.
+    pub fn try_get_confirmed_transaction(
+        &self,
+        transaction_id: &N::TransactionID,
+    ) -> Result<Option<ConfirmedTransaction<N>>> {
+        self.vm.block_store().get_confirmed_transaction(transaction_id)
+    }
+
     /// Returns the unconfirmed transaction for the given `transaction ID`.
     pub fn get_unconfirmed_transaction(&self, transaction_id: &N::TransactionID) -> Result<Transaction<N>> {
-        // Retrieve the unconfirmed transaction.
-        match self.vm.block_store().get_unconfirmed_transaction(transaction_id)? {
+        match self.try_get_unconfirmed_transaction(transaction_id)? {
             Some(unconfirmed_transaction) => Ok(unconfirmed_transaction),
             None => bail!("Missing unconfirmed transaction for ID {transaction_id}"),
         }
+    }
+
+    /// Returns the unconfirmed transaction for the given transaction ID, or `None` if no unconfirmed transaction of this ID exists.
+    pub fn try_get_unconfirmed_transaction(&self, transaction_id: &N::TransactionID) -> Result<Option<Transaction<N>>> {
+        self.vm.block_store().get_unconfirmed_transaction(transaction_id)
     }
 
     /// Returns the latest edition for the given `program ID`.
@@ -295,6 +330,14 @@ impl<N: Network, C: ConsensusStorage<N>> Ledger<N, C> {
 
     /// Returns the solution for the given solution ID.
     pub fn get_solution(&self, solution_id: &SolutionID<N>) -> Result<Solution<N>> {
+        match self.try_get_solution(solution_id)? {
+            Some(solution) => Ok(solution),
+            None => bail!("Missing solution for ID {solution_id}"),
+        }
+    }
+
+    /// Returns the solution for the given solution ID, or `None` if no solution of this ID exists.
+    pub fn try_get_solution(&self, solution_id: &SolutionID<N>) -> Result<Option<Solution<N>>> {
         self.vm.block_store().get_solution(solution_id)
     }
 

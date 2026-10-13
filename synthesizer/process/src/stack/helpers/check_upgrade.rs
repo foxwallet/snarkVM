@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2025 Provable Inc.
+// Copyright (c) 2019-2026 Provable Inc.
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,8 +34,13 @@ impl<N: Network> Stack<N> {
     ///  | closure           |   ❌   |      ❌      |  ✅   |
     ///  | function          |   ❌   | ✅ (logic)   |  ✅   |
     ///  | finalize          |   ❌   | ✅ (logic)   |  ✅   |
+    ///  | view              |   ❌   | ✅ (logic)   |  ✅   |
     ///  |-------------------|--------|--------------|-------|
     ///
+    /// There is one important caveat in that output register indices **MUST** remain the same.
+    /// For example, changing `output r10 as <NAME>.record` into `output r11 as <NAME>.record` would not be a valid upgrade.
+    /// This restriction is necessary because the output register index is instantiated as a constant in the caller circuit.
+    /// This check is enforced in `check_transaction` in `synthesizer/src/vm/verify.rs`.
     #[inline]
     pub fn check_upgrade_is_valid(old_program: &Program<N>, new_program: &Program<N>) -> Result<()> {
         // Get the new program ID.
@@ -123,6 +128,21 @@ impl<N: Network> Stack<N> {
                     );
                 }
             }
+        }
+        // Ensure that each old view exists in the new program with the same interface. View
+        // bodies are mutable (same policy as function/finalize logic) — only the externally
+        // visible input and output types must remain stable for downstream callers.
+        for old_view in old_program.views().values() {
+            let old_view_name = old_view.name();
+            let new_view = new_program.get_view_ref(old_view_name)?;
+            ensure!(
+                old_view.input_types() == new_view.input_types(),
+                "Cannot upgrade '{program_id}' because the input types of the view '{old_view_name}' do not match"
+            );
+            ensure!(
+                old_view.output_types() == new_view.output_types(),
+                "Cannot upgrade '{program_id}' because the output types of the view '{old_view_name}' do not match"
+            );
         }
         Ok(())
     }

@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2025 Provable Inc.
+// Copyright (c) 2019-2026 Provable Inc.
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -53,6 +53,32 @@ impl<N: Network> FromBytes for Operand<N> {
                 Ok(Self::ProgramOwner(program_id))
             }
             10 => Ok(Self::BlockTimestamp),
+            11 => Ok(Self::AleoGenerator),
+            12 => {
+                let index_exists: bool = FromBytes::read_le(&mut reader)?;
+                match index_exists {
+                    true => {
+                        let index: U32<N> = FromBytes::read_le(&mut reader)?;
+                        Ok(Self::AleoGeneratorPowers(Some(index)))
+                    }
+                    false => Ok(Self::AleoGeneratorPowers(None)),
+                }
+            }
+            13 => {
+                // Read the program ID.
+                let program_id = match u8::read_le(&mut reader)? {
+                    0 => None,
+                    1 => Some(ProgramID::read_le(&mut reader)?),
+                    variant => {
+                        return Err(error(format!(
+                            "Invalid program ID variant '{variant}' for the component checksum"
+                        )));
+                    }
+                };
+                // Read the component name.
+                let name = Identifier::read_le(&mut reader)?;
+                Ok(Self::ComponentChecksum(program_id, name))
+            }
             variant => Err(error(format!("Failed to deserialize operand variant {variant}"))),
         }
     }
@@ -111,6 +137,31 @@ impl<N: Network> ToBytes for Operand<N> {
                 }
             }
             Self::BlockTimestamp => 10u8.write_le(&mut writer),
+            Self::AleoGenerator => 11u8.write_le(&mut writer),
+            Self::AleoGeneratorPowers(index) => {
+                12u8.write_le(&mut writer)?;
+                // Write the index if it is present.
+                match index {
+                    Some(index) => {
+                        true.write_le(&mut writer)?;
+                        index.write_le(&mut writer)
+                    }
+                    None => false.write_le(&mut writer),
+                }
+            }
+            Self::ComponentChecksum(program_id, name) => {
+                13u8.write_le(&mut writer)?;
+                // Write the program ID.
+                match program_id {
+                    None => 0u8.write_le(&mut writer)?,
+                    Some(program_id) => {
+                        1u8.write_le(&mut writer)?;
+                        program_id.write_le(&mut writer)?;
+                    }
+                }
+                // Write the component name.
+                name.write_le(&mut writer)
+            }
         }
     }
 }

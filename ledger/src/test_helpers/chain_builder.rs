@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2025 Provable Inc.
+// Copyright (c) 2019-2026 Provable Inc.
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -68,12 +68,35 @@ pub struct TestChainBuilder<N: Network> {
 }
 
 /// Additional options you can pass to the builder when generating a set of blocks.
-#[derive(Clone, Default)]
-pub struct GenerateBlocksOptions {
+#[derive(Clone)]
+pub struct GenerateBlocksOptions<N: Network> {
     /// Do not include votes to the previous leader certificate
     pub skip_votes: bool,
     /// Do not generate certificates for the specific node indices (to simulate a partition).
     pub skip_nodes: Vec<usize>,
+    /// A flag indicating that a number of initial "placeholder blocks" should be baked
+    /// wthout transactions in order to skip to the latest version of consensus.
+    pub skip_to_current_version: bool,
+    /// The number of validators.
+    pub num_validators: usize,
+    /// Preloaded transactions to populate the blocks with.
+    pub transactions: Vec<Transaction<N>>,
+    /// When set, [`TestChainBuilder::generate_blocks_with_opts`] assigns quorum block timestamps as
+    /// `start`, `start + 1`, … instead of wall-clock time so chains match across processes.
+    pub deterministic_block_timestamp_start: Option<i64>,
+}
+
+impl<N: Network> Default for GenerateBlocksOptions<N> {
+    fn default() -> Self {
+        Self {
+            skip_votes: false,
+            skip_nodes: Default::default(),
+            skip_to_current_version: false,
+            num_validators: 0,
+            transactions: Default::default(),
+            deterministic_block_timestamp_start: None,
+        }
+    }
 }
 
 /// Additional options you can pass to the builder when generating a single block.
@@ -113,7 +136,7 @@ impl<N: Network> TestChainBuilder<N> {
         let store = ConsensusStore::<_, ConsensusMemory<_>>::open(StorageMode::new_test(None))
             .with_context(|| "Failed to initialize consensus store")?;
         // Create a genesis block with a seeded RNG to reproduce the same genesis private keys.
-        let seed: u64 = rng.r#gen();
+        let seed: u64 = rng.random();
         trace!("Using seed {seed} and key {} for genesis RNG", private_key);
         let genesis_rng = &mut TestRng::from_seed(seed);
         let genesis_block = VM::from(store).unwrap().genesis_beacon(&private_key, genesis_rng)?;
@@ -178,7 +201,6 @@ impl<N: Network> TestChainBuilder<N> {
         Ok(Self {
             private_keys,
             ledger,
-
             genesis_block,
             last_batch_round: Default::default(),
             last_committed_batch_round: Default::default(),
@@ -190,27 +212,78 @@ impl<N: Network> TestChainBuilder<N> {
 
     /// Create multiple blocks, with fully-connected DAGs.
     pub fn generate_blocks(&mut self, num_blocks: usize, rng: &mut TestRng) -> Result<Vec<Block<N>>> {
-        self.generate_blocks_with_opts(num_blocks, GenerateBlocksOptions::default(), rng)
+        let num_validators = self.private_keys.len();
+
+        self.generate_blocks_with_opts(num_blocks, GenerateBlocksOptions { num_validators, ..Default::default() }, rng)
     }
 
     /// Create multiple blocks, with additional parameters.
+    ///
+    /// # Panics
+    /// This function panics if called from an async context.
     pub fn generate_blocks_with_opts(
         &mut self,
         num_blocks: usize,
-        options: GenerateBlocksOptions,
+        mut options: GenerateBlocksOptions<N>,
         rng: &mut TestRng,
     ) -> Result<Vec<Block<N>>> {
         assert!(num_blocks > 0, "Need to build at least one block");
 
-        let options = GenerateBlockOptions {
-            skip_votes: options.skip_votes,
-            skip_nodes: options.skip_nodes,
-            ..Default::default()
+        let mut result = vec![];
+        let mut deterministic_ts = options.deterministic_block_timestamp_start;
+
+        let mut next_block_timestamp = || -> i64 {
+            match deterministic_ts {
+                Some(t) => {
+                    deterministic_ts = Some(t.saturating_add(1));
+                    t
+                }
+                None => OffsetDateTime::now_utc().unix_timestamp(),
+            }
         };
 
-        let mut result = vec![];
-        for _ in 0..num_blocks {
-            let block = self.generate_block_with_opts(options.clone(), rng)?;
+        // If configured, skip enough blocks to reach the current consensus version.
+        if options.skip_to_current_version {
+            let (version, target_height) = TEST_CONSENSUS_VERSION_HEIGHTS.last().unwrap();
+            let mut current_height = self.ledger.latest_height();
+
+            let diff = target_height.saturating_sub(current_height);
+
+            if diff > 0 {
+                println!("Skipping {diff} blocks to reach {version}");
+
+                while current_height < *target_height && result.len() < num_blocks {
+                    let options = GenerateBlockOptions {
+                        skip_votes: options.skip_votes,
+                        skip_nodes: options.skip_nodes.clone(),
+                        timestamp: next_block_timestamp(),
+                        ..Default::default()
+                    };
+
+                    let block = self.generate_block_with_opts(options, rng)?;
+                    current_height = block.height();
+                    result.push(block);
+                }
+
+                println!("Advanced to the current consensus version at height {target_height}");
+            } else {
+                debug!("Already at the current consensus version. No blocks to skip.");
+            }
+        }
+
+        while result.len() < num_blocks {
+            let num_txs = (BatchHeader::<N>::MAX_TRANSMISSIONS_PER_BATCH * options.num_validators)
+                .min(options.transactions.len());
+
+            let options = GenerateBlockOptions {
+                skip_votes: options.skip_votes,
+                skip_nodes: options.skip_nodes.clone(),
+                transactions: options.transactions.drain(..num_txs).collect(),
+                timestamp: next_block_timestamp(),
+                ..Default::default()
+            };
+
+            let block = self.generate_block_with_opts(options, rng)?;
             result.push(block);
         }
 
@@ -224,12 +297,23 @@ impl<N: Network> TestChainBuilder<N> {
         self.generate_block_with_opts(GenerateBlockOptions::default(), rng)
     }
 
-    /// Same as `generate_block` but with additional options/parameters.
-    pub fn generate_block_with_opts(
+    /// Returns a read-only handle to the ledger under construction.
+    pub fn ledger(&self) -> &Ledger<N, ConsensusMemory<N>> {
+        &self.ledger
+    }
+
+    /// Builds the Narwhal subdag and transmission map for the next quorum block, updating internal
+    /// Narwhal bookkeeping as if the block were committed, but **without** calling
+    /// [`Ledger::prepare_advance_to_next_quorum_block`] or advancing the ledger.
+    ///
+    /// Pair with [`Ledger::prepare_advance_to_next_quorum_block`] and
+    /// [`Self::apply_prepared_quorum_block`] to benchmark preparation separately from advancement.
+    #[allow(clippy::type_complexity)]
+    pub fn build_quorum_subdag_and_transmissions_for_next_block(
         &mut self,
         options: GenerateBlockOptions<N>,
         rng: &mut TestRng,
-    ) -> Result<Block<N>> {
+    ) -> Result<(Subdag<N>, IndexMap<TransmissionID<N>, Transmission<N>>, BatchCertificate<N>)> {
         assert!(
             options.skip_nodes.len() * 3 < self.private_keys.len(),
             "Cannot mark more than f nodes as unavailable/skipped"
@@ -258,8 +342,6 @@ impl<N: Network> TestChainBuilder<N> {
 
             transmissions.insert(transmission_id, transmission);
         }
-
-        let transmission_ids: IndexSet<_> = transmissions.keys().copied().collect();
 
         // =======================================
         // Create certificates for the new block.
@@ -299,6 +381,13 @@ impl<N: Network> TestChainBuilder<N> {
                 if self.last_batch_round.get(&key1_idx).unwrap_or(&0) >= &round {
                     continue;
                 }
+
+                let transmission_ids: IndexSet<_> = transmissions
+                    .keys()
+                    .skip(key1_idx * BatchHeader::<N>::MAX_TRANSMISSIONS_PER_BATCH)
+                    .take(BatchHeader::<N>::MAX_TRANSMISSIONS_PER_BATCH)
+                    .copied()
+                    .collect();
 
                 let batch_header = BatchHeader::new(
                     private_key_1,
@@ -399,8 +488,39 @@ impl<N: Network> TestChainBuilder<N> {
 
         trace!("Generated {cert_count} certificates for the next block");
 
-        // Construct the block.
+        // Validate the subDAG before reconstructing the canonical certificate order.
         let subdag = Subdag::from(subdag_map).unwrap();
+        // Reconstruct the canonical certificate order.
+        let ordered_subdag = crate::narwhal::subdag::test_helpers::order_subdag_with_dfs(&subdag);
+        let subdag = Subdag::from(ordered_subdag).unwrap();
+
+        Ok((subdag, transmissions, leader_certificate))
+    }
+
+    /// Advances the builder ledger after [`Ledger::prepare_advance_to_next_quorum_block`], and
+    /// updates Narwhal leader bookkeeping. Call with the same `leader_certificate` returned from
+    /// [`Self::build_quorum_subdag_and_transmissions_for_next_block`] for this block.
+    pub fn apply_prepared_quorum_block(
+        &mut self,
+        block: &Block<N>,
+        leader_certificate: BatchCertificate<N>,
+    ) -> Result<()> {
+        self.ledger
+            .advance_to_next_block(block)
+            .with_context(|| "Failed to (internally) advance to generated block")?;
+        self.previous_leader_certificate = Some(leader_certificate);
+        Ok(())
+    }
+
+    /// Same as `generate_block` but with additional options/parameters.
+    pub fn generate_block_with_opts(
+        &mut self,
+        options: GenerateBlockOptions<N>,
+        rng: &mut TestRng,
+    ) -> Result<Block<N>> {
+        let (subdag, transmissions, leader_certificate) =
+            self.build_quorum_subdag_and_transmissions_for_next_block(options, rng)?;
+
         let block = self.ledger.prepare_advance_to_next_quorum_block(subdag, transmissions, rng)?;
 
         // Skip to increase performance.
@@ -408,11 +528,7 @@ impl<N: Network> TestChainBuilder<N> {
 
         trace!("Generated new block {} at height {}", block.hash(), block.height());
 
-        // Update the ledger state.
-        self.ledger
-            .advance_to_next_block(&block)
-            .with_context(|| "Failed to (internally) advance to generated block")?;
-        self.previous_leader_certificate = Some(leader_certificate.clone());
+        self.apply_prepared_quorum_block(&block, leader_certificate)?;
 
         trace!("Updated internal ledger to height {}", block.height());
         Ok(block)

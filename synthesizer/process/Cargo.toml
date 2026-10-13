@@ -1,6 +1,6 @@
 [package]
 name = "snarkvm-synthesizer-process"
-version = "4.4.0"
+version = "4.11.0"
 authors = [ "The Aleo Team <hello@aleo.org>" ]
 description = "A process for a decentralized virtual machine"
 homepage = "https://aleo.org"
@@ -43,10 +43,12 @@ wasm = [
   "snarkvm-synthesizer-program/wasm",
   "snarkvm-synthesizer-snark/wasm"
 ]
-test = [ "snarkvm-console/test" ]
+test = [ "snarkvm-console/test", "snarkvm-circuit/test" ]
+history = [ "snarkvm-ledger-store/history" ]
 timer = [ "aleo-std/timer" ]
 dev-print = [ "snarkvm-utilities/dev-print" ]
 dev_skip_checks = [ ]
+test_consensus_heights = [ ]
 
 [[bench]]
 name = "stack_operations"
@@ -78,6 +80,9 @@ workspace = true
 [dependencies.snarkvm-ledger-store]
 workspace = true
 
+[dependencies.snarkvm-synthesizer-error]
+workspace = true
+
 [dependencies.snarkvm-synthesizer-program]
 workspace = true
 
@@ -96,6 +101,9 @@ workspace = true
 [dependencies.indexmap]
 workspace = true
 features = [ "serde" ]
+
+[dependencies.itertools]
+workspace = true
 
 [dependencies.locktick]
 workspace = true
@@ -133,6 +141,10 @@ workspace = true
 features = [ "query" ]
 
 [dev-dependencies.snarkvm-ledger-store]
+workspace = true
+features = [ "test" ]
+
+[dev-dependencies.snarkvm-circuit]
 workspace = true
 features = [ "test" ]
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2025 Provable Inc.
+// Copyright (c) 2019-2026 Provable Inc.
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -379,6 +379,11 @@ impl<E: PairingEngine> FromBytes for Proof<E> {
         Self::deserialize_compressed(&mut r)
             .map_err(|err| into_io_error(anyhow::Error::from(err).context("could not deserialize Proof")))
     }
+
+    fn read_le_unchecked<R: Read>(mut r: R) -> io::Result<Self> {
+        Self::deserialize_compressed_unchecked(&mut r)
+            .map_err(|err| into_io_error(anyhow::Error::from(err).context("could not deserialize Proof")))
+    }
 }
 
 /// Computes the size in bytes of a Varuna proof as produced by
@@ -391,8 +396,8 @@ impl<E: PairingEngine> FromBytes for Proof<E> {
 ///  - `hiding`: indicates whether the proof system is run in ZK mode
 ///
 /// *Returns*:
-///  - `Ok(size)` for `VarunaVersion::V2`, where `size` is the size of the proof
-///    in bytes.
+///  - `Ok(size)` for `VarunaVersion::V2` and `VarunaVersion::V3`, where `size`
+///    is the size of the proof in bytes.
 ///  - `Err` for `VarunaVersion::V1`.
 pub fn proof_size<E: PairingEngine>(
     batch_sizes: &[usize],
@@ -404,7 +409,7 @@ pub fn proof_size<E: PairingEngine>(
 
     match varuna_version {
         VarunaVersion::V1 => Err(anyhow!("Proof-size calculation not implemented for Varuna version V1")),
-        VarunaVersion::V2 => {
+        VarunaVersion::V2 | VarunaVersion::V3 => {
             // All fields are serialised in Compressed mode The breakdown is as
             // follows:
             // - batch sizes: one `usize` (which is serialised as a `u64`) for each batch

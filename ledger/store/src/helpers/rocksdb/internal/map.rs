@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2025 Provable Inc.
+// Copyright (c) 2019-2026 Provable Inc.
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,12 +18,13 @@
 use super::*;
 use crate::helpers::{Map, MapRead};
 
-use snarkvm_utilities::{LoggableError, bytes::unchecked_deserialize};
+use snarkvm_utilities::{bytes::unchecked_deserialize, flatten_error};
 
 use core::{fmt, fmt::Debug, hash::Hash, mem};
 use indexmap::IndexMap;
 use smallvec::SmallVec;
 use std::{borrow::Cow, ops::Deref, path::Path, sync::atomic::Ordering};
+use tracing::error;
 
 #[derive(Clone)]
 pub struct DataMap<K: Serialize + DeserializeOwned, V: Serialize + DeserializeOwned>(
@@ -54,11 +55,18 @@ impl<K: Serialize + DeserializeOwned, V: Serialize + DeserializeOwned> InnerData
         let checkpoint = rocksdb::checkpoint::Checkpoint::new(&self.database)?;
         checkpoint.create_checkpoint(path).map_err(|e| e.into_string())
     }
+
+    /// Reads RocksDB internal properties and publishes them to the metrics registry.
+    /// Any map can be used since they all share the same underlying `RocksDB` instance.
+    #[cfg(feature = "metrics")]
+    pub fn export_rocksdb_metrics(&self) {
+        self.database.export_rocksdb_metrics();
+    }
 }
 
 impl<
     'a,
-    K: 'a + Copy + Clone + Debug + PartialEq + Eq + Hash + Serialize + DeserializeOwned + Send + Sync,
+    K: 'a + Clone + Debug + PartialEq + Eq + Hash + Serialize + DeserializeOwned + Send + Sync,
     V: 'a + Clone + Serialize + DeserializeOwned + Send + Sync,
 > Map<'a, K, V> for DataMap<K, V>
 {
@@ -92,7 +100,7 @@ impl<
         match self.is_atomic_in_progress() {
             // If a batch is in progress, add the key to the batch.
             true => {
-                self.atomic_batch.lock().push((*key, None));
+                self.atomic_batch.lock().push((key.clone(), None));
             }
             // Otherwise, remove the key-value pair directly from the map.
             false => {
@@ -277,7 +285,7 @@ impl<
 
 impl<
     'a,
-    K: 'a + Copy + Clone + Debug + PartialEq + Eq + Hash + Serialize + DeserializeOwned + Send + Sync,
+    K: 'a + Clone + Debug + PartialEq + Eq + Hash + Serialize + DeserializeOwned + Send + Sync,
     V: 'a + Clone + Serialize + DeserializeOwned + Send + Sync,
 > MapRead<'a, K, V> for DataMap<K, V>
 {
@@ -391,6 +399,41 @@ impl<
     }
 
     ///
+    /// Returns the (key, value) pair for the greatest confirmed key ≤ the given key,
+    /// or `None` if no such entry exists in this map.
+    ///
+    /// Uses RocksDB `seek_for_prev` for O(log n) performance.
+    ///
+    fn get_floor_confirmed<Q>(&'a self, key: &Q) -> Result<Option<(Cow<'a, K>, Cow<'a, V>)>>
+    where
+        K: Borrow<Q>,
+        Q: PartialEq + Eq + Hash + Serialize + ?Sized,
+    {
+        let raw_key = self.create_prefixed_key(key)?;
+
+        let mut iter = self.database.raw_iterator();
+        iter.seek_for_prev(&raw_key);
+
+        if !iter.valid() {
+            return Ok(None);
+        }
+
+        let (k_bytes, v_bytes) = match iter.item() {
+            Some(item) => item,
+            None => return Ok(None),
+        };
+
+        // Verify this entry belongs to the same map (compare the map-ID bytes in the context).
+        if k_bytes.len() < PREFIX_LEN || k_bytes[2..][..2] != self.context[2..][..2] {
+            return Ok(None);
+        }
+
+        let k: K = unchecked_deserialize(&k_bytes[PREFIX_LEN..])?;
+        let v: V = unchecked_deserialize(v_bytes)?;
+        Ok(Some((Cow::Owned(k), Cow::Owned(v))))
+    }
+
+    ///
     /// Returns an iterator visiting each key-value pair in the atomic batch.
     ///
     fn iter_pending(&'a self) -> Self::PendingIterator {
@@ -417,6 +460,34 @@ impl<
     ///
     fn values_confirmed(&'a self) -> Self::Values {
         Values::new(self.database.prefix_iterator(&self.context))
+    }
+
+    ///
+    /// Returns the confirmed keys whose serialized form begins with the serialized `prefix`.
+    ///
+    fn get_keys_confirmed_with_prefix<Q>(&'a self, prefix: &Q) -> Result<Vec<K>>
+    where
+        Q: Serialize,
+    {
+        // Build the raw prefix: the map context (network ID + map ID) followed by the serialized prefix.
+        let mut raw_prefix = self.context.clone();
+        bincode::serialize_into(&mut raw_prefix, prefix)?;
+
+        // Seek to the prefix and collect every key sharing it. The fixed-prefix extractor only spans
+        // the map context, so the boundary of the longer prefix is checked explicitly.
+        let mut iter = self.database.raw_iterator();
+        iter.seek(&raw_prefix);
+
+        let mut keys = Vec::new();
+        while iter.valid() {
+            let Some(key) = iter.key() else { break };
+            if !key.starts_with(&raw_prefix) {
+                break;
+            }
+            keys.push(unchecked_deserialize(&key[PREFIX_LEN..])?);
+            iter.next();
+        }
+        Ok(keys)
     }
 }
 
@@ -455,10 +526,17 @@ impl<
 
         // Deserialize the key and value.
         let key = unchecked_deserialize(&key[PREFIX_LEN..])
-            .map_err(|err| err.log_error("RocksDB Iter deserialize(key) error"))
+            .map_err(|err| {
+                let err: anyhow::Error = err.into();
+                error!("{}", &flatten_error(err.context("RocksDB Iter deserialize(key) error")));
+            })
             .ok()?;
-        let value =
-            unchecked_deserialize(value).map_err(|err| err.log_error("RocksDB Iter deserialize(value) error")).ok()?;
+        let value = unchecked_deserialize(value)
+            .map_err(|err| {
+                let err: anyhow::Error = err.into();
+                error!("{}", &flatten_error(err.context("RocksDB Iter deserialize(value) error")));
+            })
+            .ok()?;
 
         self.db_iter.next();
 
@@ -488,7 +566,10 @@ impl<'a, K: 'a + Clone + Debug + PartialEq + Eq + Hash + Serialize + Deserialize
 
         // Deserialize the key.
         let key = unchecked_deserialize(&self.db_iter.key()?[PREFIX_LEN..])
-            .map_err(|err| err.log_error("RocksDB Keys deserialize(key) error"))
+            .map_err(|err| {
+                let err: anyhow::Error = err.into();
+                error!("{}", &flatten_error(err.context("RocksDB Keys deserialize(key) error")));
+            })
             .ok()?;
 
         self.db_iter.next();
@@ -519,7 +600,10 @@ impl<'a, V: 'a + Clone + Serialize + DeserializeOwned> Iterator for Values<'a, V
 
         // Deserialize the value.
         let value = unchecked_deserialize(self.db_iter.value()?)
-            .map_err(|err| err.log_error("RocksDB Values deserialize(value) error"))
+            .map_err(|err| {
+                let err: anyhow::Error = err.into();
+                error!("{}", &flatten_error(err.context("RocksDB Values deserialize(value) error")));
+            })
             .ok()?;
 
         self.db_iter.next();

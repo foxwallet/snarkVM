@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2025 Provable Inc.
+// Copyright (c) 2019-2026 Provable Inc.
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{Opcode, Operand, Operation, RegistersCircuit, RegistersTrait, StackTrait};
+use crate::{
+    FinalizeRegistersState,
+    FinalizeStoreTrait,
+    Opcode,
+    Operand,
+    Operation,
+    RegistersCircuit,
+    RegistersTrait,
+    StackTrait,
+};
 use console::{
     network::prelude::*,
     program::{Literal, LiteralType, PlaintextType, Register, RegisterType},
@@ -57,6 +66,12 @@ impl<N: Network, O: Operation<N, Literal<N>, LiteralType, NUM_OPERANDS>, const N
     #[inline]
     pub fn destinations(&self) -> Vec<Register<N>> {
         vec![self.destination.clone()]
+    }
+
+    /// Returns whether this instruction refers to an external struct.
+    #[inline]
+    pub fn contains_external_struct(&self) -> bool {
+        false
     }
 }
 
@@ -134,7 +149,12 @@ impl<N: Network, O: Operation<N, Literal<N>, LiteralType, NUM_OPERANDS>, const N
 
     /// Finalizes the instruction.
     #[inline]
-    pub fn finalize(&self, stack: &impl StackTrait<N>, registers: &mut impl RegistersTrait<N>) -> Result<()> {
+    pub fn finalize(
+        &self,
+        stack: &impl StackTrait<N>,
+        _store: Option<&dyn FinalizeStoreTrait<N>>,
+        registers: &mut impl FinalizeRegistersState<N>,
+    ) -> Result<()> {
         self.evaluate(stack, registers)
     }
 
@@ -159,10 +179,13 @@ impl<N: Network, O: Operation<N, Literal<N>, LiteralType, NUM_OPERANDS>, const N
             .map(|input_type| match input_type {
                 RegisterType::Plaintext(PlaintextType::Literal(literal_type)) => Ok(*literal_type),
                 RegisterType::Plaintext(PlaintextType::Struct(..))
+                | RegisterType::Plaintext(PlaintextType::ExternalStruct(..))
                 | RegisterType::Plaintext(PlaintextType::Array(..))
                 | RegisterType::Record(..)
                 | RegisterType::ExternalRecord(..)
-                | RegisterType::Future(..) => bail!("Expected literal type, found '{input_type}'"),
+                | RegisterType::Future(..)
+                | RegisterType::DynamicRecord
+                | RegisterType::DynamicFuture => bail!("Expected literal type, found '{input_type}'"),
             })
             .collect::<Result<Vec<_>>>()?;
 

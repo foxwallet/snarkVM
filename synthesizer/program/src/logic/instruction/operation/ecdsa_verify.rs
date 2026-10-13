@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2025 Provable Inc.
+// Copyright (c) 2019-2026 Provable Inc.
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{Opcode, Operand, RegistersCircuit, RegistersTrait, StackTrait};
+use crate::{
+    FinalizeRegistersState,
+    FinalizeStoreTrait,
+    Opcode,
+    Operand,
+    RegistersCircuit,
+    RegistersTrait,
+    StackTrait,
+};
 use console::{
     algorithms::{ECDSASignature, Keccak256, Keccak384, Keccak512, Sha3_256, Sha3_384, Sha3_512},
     network::prelude::*,
@@ -235,6 +243,12 @@ impl<N: Network, const VARIANT: u8> ECDSAVerify<N, VARIANT> {
     pub fn destinations(&self) -> Vec<Register<N>> {
         vec![self.destination.clone()]
     }
+
+    /// Returns whether this instruction refers to an external struct.
+    #[inline]
+    pub fn contains_external_struct(&self) -> bool {
+        false
+    }
 }
 
 // Perform the ECDSA verification based on the variant.
@@ -322,7 +336,12 @@ impl<N: Network, const VARIANT: u8> ECDSAVerify<N, VARIANT> {
 
     /// Finalizes the instruction.
     #[inline]
-    pub fn finalize(&self, stack: &impl StackTrait<N>, registers: &mut impl RegistersTrait<N>) -> Result<()> {
+    pub fn finalize(
+        &self,
+        stack: &impl StackTrait<N>,
+        _store: Option<&dyn FinalizeStoreTrait<N>>,
+        registers: &mut impl FinalizeRegistersState<N>,
+    ) -> Result<()> {
         // Ensure the number of operands is correct.
         if self.operands.len() != 3 {
             bail!("Instruction '{}' expects 3 operands, found {} operands", Self::opcode(), self.operands.len())
@@ -437,6 +456,11 @@ impl<N: Network, const VARIANT: u8> ECDSAVerify<N, VARIANT> {
             // A helper to get a struct declaration.
             let get_struct = |identifier: &Identifier<N>| stack.program().get_struct(identifier).cloned();
 
+            // A helper to get an external struct declaration.
+            let get_external_struct = |locator: &Locator<N>| {
+                stack.get_external_stack(locator.program_id())?.program().get_struct(locator.resource()).cloned()
+            };
+
             // A helper to get a record declaration.
             let get_record = |identifier: &Identifier<N>| stack.program().get_record(identifier).cloned();
 
@@ -466,8 +490,20 @@ impl<N: Network, const VARIANT: u8> ECDSAVerify<N, VARIANT> {
 
             // Get the size in bits of the message.
             let size_in_bits = match variant.is_raw() {
-                false => input_types[2].size_in_bits(&get_struct, &get_record, &get_external_record, &get_future)?,
-                true => input_types[2].size_in_bits_raw(&get_struct, &get_record, &get_external_record, &get_future)?,
+                false => input_types[2].size_in_bits(
+                    &get_struct,
+                    &get_external_struct,
+                    &get_record,
+                    &get_external_record,
+                    &get_future,
+                )?,
+                true => input_types[2].size_in_bits_raw(
+                    &get_struct,
+                    &get_external_struct,
+                    &get_record,
+                    &get_external_record,
+                    &get_future,
+                )?,
             };
             // Check the number of bits.
             ensure!(

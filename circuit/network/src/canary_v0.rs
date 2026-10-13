@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2025 Provable Inc.
+// Copyright (c) 2019-2026 Provable Inc.
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -146,6 +146,11 @@ impl Aleo for AleoCanaryV0 {
     /// Returns the serial number domain as a constant field element.
     fn serial_number_domain() -> Field<Self> {
         SERIAL_NUMBER_DOMAIN.with(|domain| domain.clone())
+    }
+
+    /// Returns the powers of `G`.
+    fn g_powers() -> Vec<Group<Self>> {
+        GENERATOR_G.with(|g| g.clone())
     }
 
     /// Returns the scalar multiplication on the generator `G`.
@@ -423,7 +428,7 @@ impl Environment for AleoCanaryV0 {
     }
 
     /// Adds one constraint enforcing that `(A * B) == C`.
-    fn enforce<Fn, A, B, C>(constraint: Fn)
+    fn enforce<Fn, A, B, C>(constraint: Fn) -> Result<(), ConstraintUnsatisfied>
     where
         Fn: FnOnce() -> (A, B, C),
         A: Into<LinearCombination<Self::BaseField>>,
@@ -518,6 +523,16 @@ impl Environment for AleoCanaryV0 {
         E::set_constraint_limit(limit)
     }
 
+    /// Returns the density limit for the circuit, if one exists.
+    fn get_non_zero_limit() -> Option<(u64, u64, u64)> {
+        E::get_non_zero_limit()
+    }
+
+    /// Sets the density limit for the circuit.
+    fn set_non_zero_limit(limit: Option<(u64, u64, u64)>) {
+        E::set_non_zero_limit(limit)
+    }
+
     /// Halts the program from further synthesis, evaluation, and execution in the current environment.
     fn halt<S: Into<String>, T>(message: S) -> T {
         E::halt(message)
@@ -554,7 +569,10 @@ impl Display for AleoCanaryV0 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use console::{TestRng, prelude::Uniform};
     use snarkvm_circuit_types::Field;
+
+    const ITERATIONS: usize = 100;
 
     type CurrentAleo = AleoCanaryV0;
 
@@ -603,5 +621,22 @@ mod tests {
             assert_eq!(0, CurrentAleo::num_private_in_scope());
             assert_eq!(0, CurrentAleo::num_constraints_in_scope());
         })
+    }
+
+    #[test]
+    fn test_g_scalar_multiply() {
+        let rng = &mut TestRng::default();
+
+        for _ in 0..ITERATIONS {
+            let scalar = Scalar::<CurrentAleo>::new(Mode::Public, snarkvm_console_types::Scalar::rand(rng));
+            let expected = CurrentAleo::g_scalar_multiply(&scalar);
+            let g_powers = CurrentAleo::g_powers();
+            let group = g_powers[0].clone() * scalar;
+            assert_eq!(expected.eject_value(), group.eject_value());
+
+            CurrentAleo::assert(expected.is_equal(&group)).unwrap();
+
+            assert!(E::is_satisfied());
+        }
     }
 }

@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2025 Provable Inc.
+// Copyright (c) 2019-2026 Provable Inc.
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,3 +20,4 @@ mod initialize;
 mod sample;
 mod stack_trait;
 mod synthesize;
+mod type_matching;

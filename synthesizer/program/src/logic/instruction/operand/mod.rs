@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2025 Provable Inc.
+// Copyright (c) 2019-2026 Provable Inc.
 // This file is part of the snarkVM library.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,8 +18,8 @@ mod parse;
 
 use console::{
     network::prelude::*,
-    program::{Literal, ProgramID, Register},
-    types::Group,
+    program::{Identifier, Literal, ProgramID, Register},
+    types::{Group, U32},
 };
 
 /// The `Operand` enum represents the options for an operand in an instruction.
@@ -47,6 +47,10 @@ pub enum Operand<N: Network> {
     /// The operand is the network ID.
     /// Note: This variant is only accessible in the `finalize` scope.
     NetworkID,
+    /// The operand is the first group base for the Aleo signature and encryption schemes.
+    AleoGenerator,
+    /// The operand is the group bases for the Aleo signature and encryption schemes.
+    AleoGeneratorPowers(Option<U32<N>>),
     /// The operand is the program checksum.
     /// If no program ID is specified, the checksum is for the current program.
     /// If a program ID is specified, the checksum is for an external program.
@@ -59,6 +63,10 @@ pub enum Operand<N: Network> {
     /// If no program ID is specified, the owner is for the current program.
     /// If a program ID is specified, the owner is for an external program.
     ProgramOwner(Option<ProgramID<N>>),
+    /// The operand is the checksum of a named program component (a function, closure, or view).
+    /// If no program ID is specified, the component is in the current program.
+    /// If a program ID is specified, the component is in an external program.
+    ComponentChecksum(Option<ProgramID<N>>, Identifier<N>),
 }
 
 impl<N: Network> From<Literal<N>> for Operand<N> {
